@@ -10,7 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 import asyncio, tempfile, os, json
 from pathlib import Path
-from schemas import (
+from urllib.parse import urlparse
+from pathwise.paths import BACKEND_ROOT, DATA_DIR
+from pathwise.schemas import (
     UserRole, 
     RecommendationRequest, ExplanationLevel, Framework, ChatMessage, 
     ChatResponse, CareerMatchRequest, CareerMatchResponse, CareerCard, CareerQuizResponse, CareerQuizQuestion,
@@ -24,31 +26,31 @@ from schemas import (
     InterviewPrepRequest, InterviewPrepResponse,
     UnifiedRoadmapRequest, UnifiedRoadmapResponse
 )
-from distiller import (
+from pathwise.learn.distiller import (
     pdf_to_text, chunk_text, embed_chunks, detect_framework,
     map_reduce_summary, gen_flashcards_quiz, generate_concept_map,
     process_chat_message, process_file_for_chat,
     get_conversation_history, get_user_conversations,
     get_side_menu_data, update_explanation_level, update_framework_preference
 )
-from mastery import (
+from pathwise.dashboard.mastery import (
     get_mastery, update_mastery
 )
-from supabase_helper import (
+from pathwise.infra.supabase_helper import (
     insert_lesson, insert_cards, insert_concept_map, mark_lesson_completed,
     get_user_completed_lessons, upsert_user_role, get_user_role,
     get_lessons_by_framework, get_user_progress_stats,
     get_lesson_summary, get_lesson_by_id, get_lesson_full_text,
 )
-from career_matcher import matcher
-from unified_career_system import unified_career_system
-from dashboard import dashboard_system
-from resume_career import (
+from pathwise.career.career_matcher import matcher
+from pathwise.career.unified_career_system import unified_career_system
+from pathwise.dashboard.dashboard import dashboard_system
+from pathwise.career.resume_career import (
     parse_resume as resume_parse,
     build_career_plan as resume_build_plan,
     upgrade_from_pdf as resume_upgrade,
 )
-from career_plan_storage import save_latest_plan, load_latest_plan
+from pathwise.career.career_plan_storage import save_latest_plan, load_latest_plan
 from dotenv import load_dotenv
 from typing import Optional, Dict, List
 from datetime import datetime
@@ -56,7 +58,20 @@ import uuid
 
 # Monorepo root `.env` (local dev) then optional `backend/.env` override on VPS.
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parent / "backend.env")
+
+# Fail fast in logs if Foundry endpoint hostname does not resolve (common misconfig).
+try:
+    from pathwise.infra.foundry_iq import check_endpoint_dns, foundry_is_configured, normalize_endpoint
+
+    if foundry_is_configured():
+        _dns_ok, _dns_msg = check_endpoint_dns()
+        if not _dns_ok:
+            logger.warning(f"Foundry IQ misconfigured at startup: {_dns_msg}")
+        else:
+            logger.info(f"Foundry IQ endpoint OK: {normalize_endpoint()}")
+except Exception as _e:  # noqa: BLE001 — never block app boot
+    logger.debug(f"Foundry startup check skipped: {_e}")
 
 # Initialize missing components that are referenced in the code
 # These are placeholders - in production, these would be properly initialized
@@ -125,6 +140,57 @@ async def health_check():
 async def test_endpoint():
     return {"message": "API is working correctly", "endpoint": "test"}
 
+
+@app.get("/api/rag/status")
+async def rag_status():
+    """Which KB backend was used last, and whether Foundry IQ is configured + reachable."""
+    from pathwise.learn.rag_kb import get_retrieval_status
+    from pathwise.infra.foundry_iq import (
+        check_endpoint_dns,
+        get_last_error,
+        normalize_endpoint,
+    )
+
+    status = get_retrieval_status()
+    endpoint = normalize_endpoint()
+    dns_ok, dns_msg = check_endpoint_dns(endpoint) if endpoint else (False, "FOUNDRY_SEARCH_ENDPOINT is not set")
+    status["foundry_endpoint"] = endpoint or None
+    status["foundry_endpoint_host"] = urlparse(endpoint).hostname if endpoint else None
+    status["foundry_endpoint_set"] = bool(endpoint)
+    status["foundry_dns_ok"] = dns_ok
+    status["foundry_dns_message"] = dns_msg
+    status["foundry_last_error"] = get_last_error()
+    status["foundry_index"] = os.getenv("FOUNDRY_INDEX")
+    status["supabase_url_set"] = bool(os.getenv("NEXT_PUBLIC_SUPABASE_URL"))
+    if not dns_ok and endpoint:
+        status["fix_hint"] = (
+            "Update FOUNDRY_SEARCH_ENDPOINT in .env (repository root) to the exact URL from "
+            "Azure Portal → AI Search resource → Overview → Url (must resolve in DNS)."
+        )
+    return status
+
+
+@app.get("/api/rag/probe")
+async def rag_probe(q: str = Query(..., min_length=3, description="Test retrieval query")):
+    """Run a live retrieval and return provider + sample chunks (debug/demo)."""
+    from pathwise.learn.rag_kb import retrieve_with_meta
+
+    matches, meta = await retrieve_with_meta(q, top_k=3)
+    return {
+        "meta": meta,
+        "matches": [
+            {
+                "retrieval_provider": m.get("retrieval_provider"),
+                "doc": m.get("doc"),
+                "section": m.get("section"),
+                "similarity": m.get("similarity"),
+                "source_uri": m.get("source_uri"),
+                "preview": (m.get("chunk") or "")[:240],
+            }
+            for m in matches
+        ],
+    }
+
 @app.get("/api/debug/lesson/{lesson_id}")
 async def debug_lesson_content(lesson_id: int):
     """Lightweight debug endpoint: reports what we have stored for a lesson.
@@ -134,7 +200,7 @@ async def debug_lesson_content(lesson_id: int):
     don't have two diverging code paths producing different output.
     """
     try:
-        from distiller import get_lesson_cache
+        from pathwise.learn.distiller import get_lesson_cache
         cached = get_lesson_cache(str(lesson_id)) or {}
 
         lesson_data = get_lesson_by_id(lesson_id) or {}
@@ -282,7 +348,7 @@ async def ingest_distilled_lesson(
     try:
         # Get lesson data (prefer cache)
         try:
-            from distiller import get_lesson_cache
+            from pathwise.learn.distiller import get_lesson_cache
         except Exception:
             get_lesson_cache = None
         cached = get_lesson_cache(str(lesson_id)) if get_lesson_cache else None
@@ -299,7 +365,7 @@ async def ingest_distilled_lesson(
             raise HTTPException(404, "Lesson summary not found")
         
         # Get or create conversation
-        from distiller import get_or_create_conversation, add_message_to_conversation, conversation_store
+        from pathwise.learn.distiller import get_or_create_conversation, add_message_to_conversation, conversation_store
         conv_id = get_or_create_conversation(conversation_id, user_id)
         
         # Add lesson context to conversation (use full text if available, otherwise summary)
@@ -667,7 +733,7 @@ async def get_available_frameworks():
 @app.on_event("startup")
 async def _startup():
     try:
-        from distiller import precompute_micro_lessons_embeddings
+        from pathwise.learn.distiller import precompute_micro_lessons_embeddings
         total, embedded = await precompute_micro_lessons_embeddings()
         logger.info(f"Micro-lessons precomputed: {embedded}/{total}")
     except Exception as e:
@@ -693,7 +759,7 @@ async def debug_supabase_seed(user_id: str = Query("anonymous-user")):
     """Insert a test lesson + one card + concept map to verify Supabase writes."""
     try:
         from supabase_helper import insert_lesson, insert_cards, insert_concept_map
-        from schemas import Framework, ExplanationLevel
+        from pathwise.schemas import Framework, ExplanationLevel
 
         title = f"Test Lesson {datetime.utcnow().isoformat()}"
         summary = "• Test bullet one\n• Test bullet two\n• Test bullet three"
@@ -1445,7 +1511,7 @@ def _load_micro_lessons() -> List[Dict]:
     if _MICRO_LESSONS_CACHE is not None:
         return _MICRO_LESSONS_CACHE
     try:
-        data_path = Path(__file__).parent / 'data' / 'micro_lessons.json'
+        data_path = DATA_DIR / 'micro_lessons.json'
         with open(data_path, 'r', encoding='utf-8') as f:
             raw = json.load(f)
         lessons: List[Dict] = []
@@ -1610,8 +1676,8 @@ async def diagnostic_results_endpoint(request: Request):
 # =============================================================================
 from fastapi import Form
 from fastapi.responses import StreamingResponse, JSONResponse
-import career_simulator
-from career_simulator import SimulatorAnswerRequest
+import pathwise.career.career_simulator as career_simulator
+from pathwise.career.career_simulator import SimulatorAnswerRequest
 
 
 @app.post("/api/simulator/start")
@@ -1724,10 +1790,10 @@ async def simulator_report(session_id: str):
 @app.get("/api/simulator/eval")
 async def simulator_eval():
     """Return the latest offline eval report (groundedness, refusal, latency)."""
-    report_path = Path(__file__).parent / "data" / "eval" / "simulator_eval_report.json"
+    report_path = DATA_DIR / "eval" / "simulator_eval_report.json"
     if not report_path.exists():
         return JSONResponse(
-            {"available": False, "message": "Run: python backend/eval_simulator.py"},
+            {"available": False, "message": "Run: python -m pathwise.eval.eval_simulator"},
             status_code=200,
         )
     return JSONResponse({"available": True, **json.loads(report_path.read_text())})

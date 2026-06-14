@@ -36,21 +36,21 @@ from typing import Any, Dict, List, Optional
 from loguru import logger
 from pydantic import BaseModel
 
-from distiller import (
+from pathwise.learn.distiller import (
     call_groq,
     _parse_json_safely,
     map_reduce_summary,
     gen_flashcards_quiz,
 )
-from resume_career import (
+from pathwise.career.resume_career import (
     parse_resume,
     parse_resume_text,
     _find_onet_row,
     _onet_summary,
     build_career_plan,
 )
-from rag_kb import retrieve as kb_retrieve, format_kb_context
-from schemas import ExplanationLevel
+from pathwise.learn.rag_kb import retrieve as kb_retrieve, format_kb_context
+from pathwise.schemas import ExplanationLevel
 
 
 # --------------------------------------------------------------------------- #

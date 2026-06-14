@@ -14,7 +14,9 @@ from typing import Any, Dict, Optional
 
 from loguru import logger
 
-_PLANS_DIR = Path(__file__).resolve().parent / "data" / "career_plans"
+from pathwise.paths import DATA_DIR
+
+_PLANS_DIR = DATA_DIR / "career_plans"
 
 
 def _safe_user_segment(user_id: str) -> str:

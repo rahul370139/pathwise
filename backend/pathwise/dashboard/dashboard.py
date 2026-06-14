@@ -14,7 +14,9 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-_BACKEND_ROOT = Path(__file__).resolve().parent
+from pathwise.paths import DATA_DIR
+
+_BACKEND_ROOT = DATA_DIR.parent
 
 class DashboardSystem:
     """

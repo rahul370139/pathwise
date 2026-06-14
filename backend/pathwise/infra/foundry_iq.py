@@ -32,7 +32,9 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import Dict, List, Optional
+import socket
+from typing import Dict, List, Optional, Tuple
+from urllib.parse import urlparse
 
 from loguru import logger
 
@@ -46,10 +48,51 @@ _SOURCE_CANDIDATES = [
 ]
 _TITLE_CANDIDATES = ["title", "name", "document_title", "filename"]
 
+_last_error: Optional[str] = None
+
+
+def get_last_error() -> Optional[str]:
+    """Human-readable reason the last Foundry call returned no results."""
+    return _last_error
+
+
+def normalize_endpoint(raw: Optional[str] = None) -> str:
+    """Return a clean Azure Search base URL (no trailing slash, no /indexes path)."""
+    value = (raw or os.getenv("FOUNDRY_SEARCH_ENDPOINT") or "").strip()
+    if not value:
+        return ""
+    if not value.startswith(("http://", "https://")):
+        value = f"https://{value}"
+    parsed = urlparse(value)
+    if not parsed.netloc:
+        raise ValueError(f"Invalid FOUNDRY_SEARCH_ENDPOINT: {raw!r}")
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def check_endpoint_dns(endpoint: Optional[str] = None) -> Tuple[bool, str]:
+    """Return (dns_ok, message) for the search service hostname."""
+    try:
+        url = normalize_endpoint(endpoint)
+    except ValueError as e:
+        return False, str(e)
+    if not url:
+        return False, "FOUNDRY_SEARCH_ENDPOINT is not set"
+    host = urlparse(url).hostname or ""
+    if not host.endswith(".search.windows.net"):
+        return False, f"Unexpected host {host!r} — expected *.search.windows.net"
+    try:
+        socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+        return True, f"DNS OK for {host}"
+    except socket.gaierror as e:
+        return False, (
+            f"DNS lookup failed for {host}: {e}. "
+            "Copy the exact URL from Azure Portal → your Search service → Overview → Url."
+        )
+
 
 def foundry_is_configured() -> bool:
     """True only when the minimum Foundry IQ env vars are present."""
-    return bool(os.getenv("FOUNDRY_SEARCH_ENDPOINT") and os.getenv("FOUNDRY_INDEX"))
+    return bool(normalize_endpoint() and os.getenv("FOUNDRY_INDEX"))
 
 
 def _pick_field(doc: Dict, configured: Optional[str], candidates: List[str]) -> Optional[str]:
@@ -89,7 +132,7 @@ def _search_sync(query: str, top_k: int) -> List[Dict]:
     from azure.core.credentials import AzureKeyCredential
     from azure.search.documents import SearchClient
 
-    endpoint = os.environ["FOUNDRY_SEARCH_ENDPOINT"]
+    endpoint = normalize_endpoint()
     index = os.environ["FOUNDRY_INDEX"]
     key = os.getenv("FOUNDRY_SEARCH_KEY")
 
@@ -174,18 +217,38 @@ async def retrieve(query: str, top_k: int = 6) -> List[Dict]:
     """Return grounded chunks from Foundry IQ. Empty list on any failure.
 
     Callers MUST handle the empty case (so `rag_kb.retrieve` can fall back).
+    Inspect ``get_last_error()`` to distinguish DNS/auth errors from zero hits.
     """
+    global _last_error
+    _last_error = None
+
     if not foundry_is_configured() or not query or not query.strip():
+        if not foundry_is_configured():
+            _last_error = "foundry_not_configured"
         return []
+
+    dns_ok, dns_msg = check_endpoint_dns()
+    if not dns_ok:
+        _last_error = dns_msg
+        logger.warning(f"Foundry IQ endpoint check failed: {dns_msg}")
+        return []
+
     try:
-        return await asyncio.to_thread(_search_sync, query, top_k)
+        matches = await asyncio.to_thread(_search_sync, query, top_k)
+        # Drop rows with no retrievable text (wrong field mapping).
+        matches = [m for m in matches if (m.get("chunk") or "").strip()]
+        if not matches:
+            _last_error = "foundry_empty"
+        return matches
     except ImportError:
+        _last_error = "azure-search-documents not installed"
         logger.warning(
             "azure-search-documents not installed; install it to use Foundry IQ. "
             "Falling back to Supabase KB."
         )
         return []
     except Exception as e:  # noqa: BLE001 - we always degrade gracefully
+        _last_error = str(e)
         logger.warning(f"Foundry IQ retrieval failed ({e}); falling back to Supabase KB.")
         return []
 

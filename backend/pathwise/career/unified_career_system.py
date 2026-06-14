@@ -19,9 +19,11 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-from schemas import (
+from pathwise.schemas import (
     UnifiedRoadmapRequest, UnifiedRoadmapResponse, InterviewPrepRequest, InterviewPrepResponse
 )
+
+from pathwise.paths import DATA_DIR
 
 class UnifiedCareerSystem:
     """
@@ -36,7 +38,7 @@ class UnifiedCareerSystem:
         self.cohere_api_key = os.getenv("COHERE_API_KEY")
         self.groq_api_key = os.getenv("GROQ_API_KEY")
         self.groq_api_key_2 = os.getenv("GROQ_API_KEY_2")
-        self.data_path = Path(__file__).parent / "data"
+        self.data_path = DATA_DIR
         
         # Load career data and roadmaps
         self.career_data = self._load_career_data()

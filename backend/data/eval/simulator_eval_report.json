@@ -1,0 +1,36 @@
+{
+  "generated_at": "2026-06-14T21:32:07Z",
+  "scenario_count": 3,
+  "metrics": {
+    "groundedness": 0.5,
+    "answer_relevance": 1.0,
+    "refusal_correctness": 1.0,
+    "latency_p95_sec": 2.475
+  },
+  "results": [
+    {
+      "id": "ds-strong",
+      "expect": "answer",
+      "refused": false,
+      "gaps_found": 5,
+      "grounded_supported": true,
+      "latency_sec": 2.475
+    },
+    {
+      "id": "fe-partial",
+      "expect": "answer",
+      "refused": false,
+      "gaps_found": 7,
+      "grounded_supported": false,
+      "latency_sec": 2.252
+    },
+    {
+      "id": "oos-short",
+      "expect": "refuse",
+      "refused": true,
+      "gaps_found": 0,
+      "grounded_supported": null,
+      "latency_sec": 0.0
+    }
+  ]
+}

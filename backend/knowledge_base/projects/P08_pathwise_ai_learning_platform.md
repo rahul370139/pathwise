@@ -14,8 +14,24 @@
 |-----------|--------|
 | **Situation** | Learners lack a unified platform that combines personalized learning content generation with AI-powered career guidance. Existing tools either do content or career advice, never both intelligently together. |
 | **Task** | Build a full-stack AI platform that ingests PDFs to generate multi-format learning content (summaries, quizzes, flashcards, micro-lessons, concept maps) and provides RIASEC-based career matching with personalized roadmaps -- all powered by LLM and semantic search. |
-| **Action** | Designed and built a 10,687-line Python backend (FastAPI) with RAG architecture using Groq LLM + Cohere embeddings + Supabase PostgreSQL. Implemented map-reduce summarization, LRU caching with TTL, dual API key failover, and a React/Next.js frontend. Deployed backend on Railway and frontend on Vercel. |
-| **Result** | Live production platform with PDF-to-learning pipeline (upload to content in ~8s), 10-question RIASEC career quiz matching against O*NET/BLS career dataset, multi-format content generation (summaries, quizzes up to 20 Qs, flashcards, workflows, concept maps), and comprehensive career roadmaps with skill gap analysis. |
+| **Action** | Designed and built a FastAPI backend with RAG architecture using Groq LLM + Cohere embeddings + Supabase PostgreSQL, plus a Next.js frontend. Implemented map-reduce summarization, dual API key failover, Microsoft Foundry IQ grounding, and the Career Simulator multi-agent loop. Deployed frontend on Vercel and backend on Hostinger VPS (Docker). |
+| **Result** | Live production platform with PDF-to-learning pipeline (upload to content in ~8s), 10-question RIASEC career quiz matching against O*NET/BLS career dataset, multi-format content generation (summaries, quizzes up to 20 Qs, flashcards, workflows, concept maps), comprehensive career roadmaps with skill gap analysis, and the **Career Simulator** multi-agent interview with Microsoft Foundry IQ grounding. |
+
+### Agents League build (Creative Apps track, 2026)
+
+PathWise was built for the **GitHub Copilot Creative Apps** track with these core capabilities (see [../../docs/COMPETITION.md](../../docs/COMPETITION.md) for internal planning notes):
+
+| Enhancement | Implementation |
+|---|---|
+| **Microsoft Foundry IQ** | `pathwise/infra/foundry_iq.py` — Azure AI Search citation-backed retrieval; `rag_kb.retrieve()` failover to Supabase pgvector |
+| **Career Simulator** | `pathwise/career/career_simulator.py` — PLAN → RETRIEVE → GENERATE → VERIFY loop; `/api/simulator/*` + SSE stream |
+| **Agent Thinking UI** | `agent-thinking-panel.tsx` — live timeline with citation chips |
+| **Readiness Report** | `readiness-report.tsx` — 30/60/90 plan, top gaps, export |
+| **Eval harness** | `pathwise/eval/eval_simulator.py` — groundedness, refusal correctness, p95 latency → dashboard eval card |
+| **Knowledge base corpus** | `knowledge_base/` — learning, behavioral, O*NET, project docs synced to Foundry index |
+| **Deployment** | Frontend on **Vercel**; backend on **Hostinger VPS** (Docker) |
+
+**One-liner pitch:** *Drop in any PDF or paste a job posting — PathWise turns it into a personalized learning universe and a role-ready career cockpit in seconds.*
 
 ### Architecture Diagram
 
@@ -28,30 +44,29 @@
         | HTTPS
         v
  +------------------+         +-------------------------------------------+
- |  Vercel (CDN)    |         |        Railway (Backend)                  |
+ |  Vercel (CDN)    |         |     Hostinger VPS (Backend, Docker)       |
  |  React / Next.js |  REST   |  +------------------------------------+  |
- |  Frontend        |-------->|  |     FastAPI  (main.py - 2,292 L)   |  |
- |                  |<--------|  |     CORS Middleware                 |  |
+ |  Frontend        |-------->|  |     FastAPI  (main.py)             |  |
+ |  + Simulator UI  |<--------|  |     CORS · Simulator · Learn APIs  |  |
  +------------------+         |  +----+--------+--------+--------+----+  |
                               |       |        |        |        |       |
                               |       v        v        v        v       |
                               |  +--------+ +------+ +------+ +-------+  |
-                              |  |Distiller| |Career| |Study | |Dash-  |  |
-                              |  |1,791 L  | |Matcher| |Agent | |board  |  |
-                              |  |PDF+RAG  | |875 L | |584 L | |584 L  |  |
+                              |  |Distiller| |Career| |Simul-| |Dash-  |  |
+                              |  |PDF+RAG  | |Matcher| |ator  | |board  |  |
                               |  +---+-----+ +--+---+ +--+---+ +---+---+  |
                               |      |          |        |          |      |
                               +------|----------|--------|----------|------+
                                      |          |        |          |
                  +-------------------+----------+--------+----------+
-                 |                   |                    |
-                 v                   v                    v
-          +-----------+      +-----------+        +-----------+
-          | Groq API  |      | Cohere    |        | Supabase  |
-          | llama-3.3 |      | embed-    |        | PostgreSQL|
-          | 70b       |      | english-  |        | + pgvector|
-          | temp=0.3  |      | light-v3.0|        |           |
-          +-----------+      | 384-dim   |        +-----------+
+                 |                   |          |          |
+                 v                   v          v          v
+          +-----------+      +-----------+  +-----------+  +-----------+
+          | Groq API  |      | Cohere    |  | Microsoft |  | Supabase  |
+          | llama-3.3 |      | embed-    |  | Foundry IQ|  | PostgreSQL|
+          | 70b       |      | english-  |  | Azure AI  |  | + pgvector|
+          | temp=0.3  |      | light-v3.0|  | Search KB |  | (fallback)|
+          +-----------+      | 384-dim   |  +-----------+  +-----------+
                              +-----------+
 ```
 
@@ -64,8 +79,9 @@
 | **Embeddings** | Cohere API | `embed-english-light-v3.0`, 384 dimensions |
 | **Database** | Supabase (PostgreSQL) | Tables: `lessons`, `lesson_metadata`, `concept_maps`, `lesson_completions`, `user_roles`, `mastery`, `doc_concepts` |
 | **Frontend** | React / Next.js | Deployed on Vercel CDN |
-| **Backend Deploy** | Railway | Uvicorn ASGI server, `Procfile` config |
-| **Frontend Deploy** | Vercel | Automatic CI/CD from GitHub |
+| **Backend Deploy** | Hostinger VPS (Docker) | Uvicorn ASGI, `docker-compose.yml`; also Railway via `Procfile` |
+| **Frontend Deploy** | Vercel | Automatic CI/CD; `API_PROXY_TARGET` → Hostinger backend |
+| **Microsoft IQ** | Azure AI Search (Foundry IQ) | `foundry_iq.py`, index `prepkb-index`, citation-backed RAG |
 | **PDF Parsing** | PyMuPDF (fitz) | Text extraction from uploaded PDFs |
 | **ML/Data** | pandas, numpy, scikit-learn | Career data processing, cosine similarity |
 | **Validation** | Pydantic v2 | 497 lines of schemas, 35+ model classes |
@@ -431,13 +447,28 @@ LLMs don't always return valid JSON. The `_parse_json_safely()` function handles
 - Trailing comma removal
 - Fallback to None (caller provides defaults)
 
+### 2.13 Career Simulator & Foundry IQ (Competition, 2026)
+
+**Multi-agent loop** (`career_simulator.py`):
+
+```
+Resume + JD → Planner (competency gaps) → Retrieval (Foundry IQ + citations)
+           → Interviewer (adaptive Q) → Scorer (rubric) → Remediation (micro-lesson)
+           → Report (30/60/90 readiness plan)
+```
+
+- **SSE streaming**: `GET /api/simulator/stream/{session_id}` powers the Agent Thinking panel.
+- **Foundry IQ**: `foundry_iq.py` queries Azure AI Search; `rag_kb.retrieve()` falls back to Supabase pgvector.
+- **Eval**: `eval_simulator.py` golden set → groundedness, refusal correctness, p95 latency.
+
 ### 2.10 Frontend: React/Next.js on Vercel
 
-- **Learn Page:** PDF upload → view summaries, quizzes, flashcards, workflows, concept maps
+- **Learn Page:** PDF upload → summaries, quizzes, flashcards, workflows, concept maps (Foundry-grounded when no PDF)
+- **Career Simulator:** Resume + JD → multi-agent interview → Readiness Report (`/simulator`)
 - **Career Page:** 10-question RIASEC quiz → top 5 career matches with roadmaps
-- **Dashboard:** Progress tracking, analytics, personalized recommendations
-- **Chat:** AI chatbot with PDF context (RAG-powered)
-- Deployed on Vercel with automatic CI/CD from GitHub
+- **Dashboard:** Per-user progress, analytics, eval card, personalized recommendations
+- **Chat:** AI chatbot with PDF context or KB RAG (citation-backed via Foundry IQ)
+- Deployed on Vercel with API proxy to Hostinger backend
 
 ### 2.11 Database: Supabase Schema
 
@@ -471,7 +502,9 @@ The project includes an agent-based architecture with:
 | **Total Backend Code** | 10,687 lines across 13 Python modules |
 | **Main API** | 2,292 lines, ~45+ REST endpoints |
 | **Pydantic Schemas** | 497 lines, 35+ validated model classes |
-| **Live Deployment** | Frontend on Vercel, Backend on Railway |
+| **Live Deployment** | Frontend on Vercel, Backend on Hostinger VPS (Docker) |
+| **Microsoft IQ** | Foundry IQ (Azure AI Search) + Supabase pgvector failover |
+| **Career Simulator** | Multi-agent interview with SSE timeline + Readiness Report |
 | **Content Types** | 6 (summaries, quizzes, flashcards, workflows, concept maps, lesson plans) |
 | **Career Dataset** | O*NET/BLS career data with RIASEC scores, salaries, growth rates |
 | **Quiz Questions** | 10 career assessment questions, 6 options each (RIASEC-weighted) |
@@ -785,4 +818,4 @@ The project includes an agent-based architecture with:
 
 ### One-Liner Pitch
 
-> "I built PathWise, a full-stack AI learning platform that turns any PDF into interactive learning content using RAG with Groq and Cohere, and matches users to careers using RIASEC psychometrics enhanced with embedding similarity -- deployed live on Vercel and Railway."
+> "I built PathWise, a full-stack AI learning and career-readiness platform that turns any PDF into interactive learning content using RAG with Groq, Cohere, and **Microsoft Foundry IQ**, runs a live **Career Simulator** multi-agent interview, and matches users to careers using RIASEC psychometrics enhanced with O*NET — deployed live on Vercel and Hostinger."

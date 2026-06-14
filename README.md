@@ -1,21 +1,36 @@
 # PathWise
 
-Monorepo for the PathWise / PathWise project.
+Monorepo for PathWise — an AI-powered learning and career-readiness platform built for the **Agents League · Creative Apps (GitHub Copilot)** track. Drop in a PDF or target job posting and PathWise turns it into personalized learning content, a grounded career cockpit, and a live **Career Simulator** interview.
 
-- **Backend**: `backend/` (FastAPI)
-- **Frontend**: `frontend/` (Next.js 14)
+- **Backend**: `backend/` (FastAPI on Hostinger VPS) — [backend/README.md](backend/README.md)
+- **Frontend**: `frontend/` (Next.js 14 on Vercel) — [frontend/README.md](frontend/README.md)
+- **Live demo**: [pathwise001.vercel.app](https://pathwise001.vercel.app/)
+- **Hackathon submission copy**: [docs/SUBMISSION.md](docs/SUBMISSION.md)
+- **All documentation**: [docs/README.md](docs/README.md)
+
+## Documentation
+
+| Doc | Purpose |
+|---|---|
+| [docs/SUBMISSION.md](docs/SUBMISSION.md) | **Project page** — pitch, track, Foundry IQ, demo script |
+| [docs/COPILOT_NOTES.md](docs/COPILOT_NOTES.md) | GitHub Copilot build narrative |
+| [docs/COMPETITION.md](docs/COMPETITION.md) | Rubric mapping & implementation brief |
+| [docs/backend/ARCHITECTURE.md](docs/backend/ARCHITECTURE.md) | Backend flows, endpoints, Foundry IQ |
+| [docs/backend/STRUCTURE.md](docs/backend/STRUCTURE.md) | `pathwise/` package tree & CLI probes |
 
 ## Repository layout
 
-- **`backend/`**: FastAPI service + Python modules + bundled JSON/CSV datasets under `backend/data/`
+- **`backend/pathwise/`**: Python package — `learn/`, `career/`, `dashboard/`, `infra/`, `eval/` (see [docs/backend/STRUCTURE.md](docs/backend/STRUCTURE.md))
+- **`backend/`**: FastAPI service + `main.py` entry + datasets under `backend/data/`
+- **`backend/knowledge_base/`**: Version-controlled grounding corpus (learning topics, behavioral prep, O*NET briefs) synced to **Foundry IQ**
 - **`frontend/`**: Next.js app (PathWise UI)
-- **`backend/scripts/`**: offline / maintenance scripts (not imported by the API runtime)
+- **`backend/scripts/`**: offline / maintenance scripts (`push_to_foundry.py`, `onet_to_markdown.py`, RAG ingest)
 - **Root deploy configs**: `Procfile`, `render.yaml`
 
 
 ## System Architecture (End-to-End)
 
-The source-of-truth deep-dive (with sub-diagrams and migration details) is in `backend/ARCHITECTURE.md`.  
+The source-of-truth deep-dive (with sub-diagrams and migration details) is in [docs/backend/ARCHITECTURE.md](docs/backend/ARCHITECTURE.md).  
 This section is the end-to-end product architecture view aligned with the current code in `backend/main.py`.
 
 ### High-level architecture (executive view)
@@ -26,9 +41,11 @@ flowchart LR
     subgraph Users["Users & Product Surfaces"]
       Learner["Learner"]
       Learn["Learn (chat + PDF distill)"]
+      Sim["Career Simulator<br/>(multi-agent interview)"]
       Career["Career (match + upgrade plans)"]
       Dashboard["Dashboard (progress + coaching)"]
       Learner --> Learn
+      Learner --> Sim
       Learner --> Career
       Learner --> Dashboard
     end
@@ -40,6 +57,7 @@ flowchart LR
     end
 
     Learn --> Frontend
+    Sim --> Frontend
     Career --> Frontend
     Dashboard --> Frontend
     Frontend --> Edge
@@ -48,29 +66,37 @@ flowchart LR
     subgraph Platform["AI Platform Backend"]
       API["FastAPI API Gateway (main.py)"]
       LearnSvc["Learning Engine (distiller + RAG)"]
+      SimSvc["Career Simulator<br/>(plan→retrieve→verify loop)"]
       CareerSvc["Career Engine (matcher + resume planner)"]
       DashSvc["Progress & Insights Engine (dashboard + mastery)"]
     end
 
     Edge --> API
     API --> LearnSvc
+    API --> SimSvc
     API --> CareerSvc
     API --> DashSvc
 
     %% 4) Intelligence + data
     subgraph Intelligence["Intelligence & Knowledge Layer"]
-      LLM["Groq LLM"]
+      LLM["Groq LLM<br/>(generation)"]
       Embeddings["Cohere Embeddings"]
-      KB["Interview Prep KB (pgvector)"]
+      FIQ["Microsoft Foundry IQ<br/>(Azure AI Search KB)"]
+      KB["Interview Prep KB (pgvector fallback)"]
       ONet["Career Dataset (O*NET)"]
     end
 
     LearnSvc --> LLM
     LearnSvc --> Embeddings
-    LearnSvc --> KB
+    LearnSvc --> FIQ
+    LearnSvc -.->|failover| KB
+    SimSvc --> LLM
+    SimSvc --> FIQ
+    SimSvc -.->|failover| KB
     CareerSvc --> LLM
     CareerSvc --> Embeddings
     CareerSvc --> ONet
+    FIQ --> KB
 
     %% 5) Persistence
     subgraph Data["Persistence Layer"]
@@ -106,10 +132,12 @@ flowchart TB
       Web["Web Client (Next.js on Vercel)"]
       Auth["Supabase Auth Session"]
       LearnUI["Learn Surface<br/>chat · upload · quick actions"]
+      SimUI["Career Simulator<br/>resume+JD · agent timeline · readiness report"]
       CareerUI["Career Surface<br/>match · roadmap · resume upgrade"]
-      DashUI["Dashboard Surface<br/>progress · analytics · coaching"]
+      DashUI["Dashboard Surface<br/>progress · analytics · eval card"]
       Web --> Auth
       Web --> LearnUI
+      Web --> SimUI
       Web --> CareerUI
       Web --> DashUI
     end
@@ -122,6 +150,7 @@ flowchart TB
       Rewrites["Next rewrites/proxy<br/>same-origin /api/* and /health"]
       CORS["CORS + HTTPS boundary"]
       LearnUI --> Vercel
+      SimUI --> Vercel
       CareerUI --> Vercel
       DashUI --> Vercel
       Vercel --> Rewrites
@@ -137,6 +166,7 @@ flowchart TB
       CareerAPI["Career APIs<br/>/api/career/match · /roadmap/* · /upgrade<br/>/resume/parse · /plan/build · /plan/snapshot"]
       DashAPI["Dashboard APIs<br/>/api/dashboard/*"]
       AgentAPI["Agent APIs<br/>/api/agent/mastery · /api/agent/diagnostic/results"]
+      SimAPI["Simulator APIs<br/>/api/simulator/{start,answer,stream,report,eval}"]
       RecoAPI["Recommendation APIs<br/>/api/recommendations/* · /api/analytics/user/*"]
     end
 
@@ -145,6 +175,7 @@ flowchart TB
     CORS --> CareerAPI
     CORS --> DashAPI
     CORS --> AgentAPI
+    CORS --> SimAPI
     CORS --> RecoAPI
 
     %% =======================
@@ -153,7 +184,10 @@ flowchart TB
     subgraph DOM["Domain & Intelligence Layer (Python Modules)"]
       Distiller["distiller.py<br/>intent routing · prompt assembly · generation"]
       ConvState["conversation store/cache<br/>file_context + side-menu state"]
-      RAG["rag_kb.py<br/>fallback retrieval when no PDF context"]
+      RAG["rag_kb.py<br/>retrieve() → Foundry IQ or Supabase"]
+      FIQmod["foundry_iq.py<br/>Microsoft Foundry IQ client"]
+      SimOrch["career_simulator.py<br/>Planner · Retrieval · Interviewer · Scorer"]
+      EvalSim["eval_simulator.py<br/>golden-set groundedness + latency"]
       Resume["resume_career.py<br/>resume extraction + upgrade plan synthesis"]
       Matcher["career_matcher.py<br/>RIASEC + embedding similarity over O*NET"]
       Unified["unified_career_system.py<br/>legacy/unified roadmap generator"]
@@ -166,7 +200,13 @@ flowchart TB
     LearnAPI --> Distiller
     Distiller --> ConvState
     Distiller -. if no PDF context .-> RAG
-    Distiller --> SHelper
+    RAG --> FIQmod
+    RAG -. failover .-> SHelper
+    SimAPI --> SimOrch
+    SimOrch --> Resume
+    SimOrch --> RAG
+    SimOrch --> Distiller
+    EvalSim -. offline .-> SimOrch
 
     CareerAPI --> Resume
     CareerAPI --> Matcher
@@ -186,6 +226,7 @@ flowchart TB
     subgraph DATA["Data, Models & External Services"]
       Groq["Groq LLM<br/>structured generation"]
       Cohere["Cohere Embeddings<br/>semantic retrieval + similarity"]
+      Foundry["Microsoft Foundry IQ<br/>Azure AI Search index (prepkb-index)"]
       Supabase[(Supabase Postgres + pgvector)]
       KB[(interview_prep_kb<br/>chunked knowledge base)]
       Lessons[(lessons / lesson_metadata / concept_maps)]
@@ -197,6 +238,8 @@ flowchart TB
     Distiller --> Groq
     Distiller --> Cohere
     RAG --> Cohere
+    FIQmod --> Foundry
+    Foundry -. indexes .-> KB
     RAG --> Supabase
     RAG --> KB
     Resume --> Groq
@@ -231,13 +274,23 @@ flowchart TB
 
 The single diagram above covers all paths; this section maps each product surface to concrete API and module responsibilities.
 
+#### Career Simulator (signature Creative Apps feature)
+
+- Frontend route: `/simulator` — upload resume + paste job description, then run a live multi-agent interview.
+- Backend orchestrator: `career_simulator.py` runs an inspectable loop:
+  **PLAN → RETRIEVE (Foundry IQ) → GENERATE (adaptive question) → VERIFY (rubric score) → REMEDIATE → FINALIZE (readiness report)**.
+- APIs: `POST /api/simulator/start`, `POST /api/simulator/answer`, `GET /api/simulator/stream/{session_id}` (SSE agent timeline), `GET /api/simulator/report/{session_id}`, `GET /api/simulator/eval`.
+- UI components: `agent-thinking-panel.tsx` (streamed steps + citation chips), `readiness-report.tsx` (30/60/90 plan + export).
+- Grounding: `rag_kb.retrieve()` prefers **Microsoft Foundry IQ** (`foundry_iq.py` → Azure AI Search) and falls back to Supabase pgvector — the demo failover story.
+- Reliability: `eval_simulator.py` produces `data/eval/simulator_eval_report.json`; the dashboard renders an eval card from `GET /api/simulator/eval`.
+
 #### Learn surface (content generation loop)
 
 - Frontend calls `/api/chat`, `/api/chat/upload`, and `/api/distill` from the Learn page.
 - `main.py` delegates generation and retrieval orchestration to `distiller.py`.
 - `distiller.py` uses:
   - conversation/PDF context when available;
-  - `rag_kb.py` retrieval from `interview_prep_kb` when no PDF context is present;
+  - `rag_kb.retrieve()` → **Foundry IQ** (citation-backed) with Supabase pgvector fallback when no PDF context is present;
   - Groq for structured generation;
   - Cohere for embeddings.
 - Persisted learning artifacts (lesson rows, cards, concept maps, progress) are written through `supabase_helper.py` into Supabase.
@@ -262,26 +315,40 @@ The single diagram above covers all paths; this section maps each product surfac
 - **API (`backend/main.py`)**: request validation, endpoint composition, response contracts.
 - **Domain modules (`distiller.py`, `resume_career.py`, `career_matcher.py`, `dashboard.py`)**: core product logic.
 - **Persistence wrappers (`supabase_helper.py`, `career_plan_storage.py`)**: durable state access.
-- **AI providers**: Groq for generation, Cohere for embeddings.
+- **AI providers**: Groq for fast generation; **Microsoft Foundry IQ** (Azure AI Search) for citation-first grounding; Cohere for embeddings; Supabase pgvector as retrieval failover.
 
 ### Contract checks (must stay true)
 
 1. Learn quick actions route through `/api/chat` and return typed payloads.
 2. Career resume planning uses `resume_career.py` + O*NET-backed matching.
 3. Dashboard read paths remain stable even if Supabase is unavailable (graceful fallback behavior exists in helper layer).
-4. `backend/ARCHITECTURE.md` is the low-level reference; this README section is the high-level end-to-end map.
+4. [docs/backend/ARCHITECTURE.md](docs/backend/ARCHITECTURE.md) is the low-level reference; this README section is the high-level end-to-end map.
+5. **Microsoft IQ**: Foundry IQ must be configured in production (`FOUNDRY_SEARCH_*` env vars); see `pathwise/infra/foundry_iq.py` and `backend/knowledge_base/README.md`. Debug retrieval source via `GET /api/rag/status` and `GET /api/rag/probe?q=...`.
+
+## Competition readiness (Creative Apps track)
+
+**One-line pitch:** *Drop in any PDF or paste a job posting — PathWise turns it into a personalized learning universe and a role-ready career cockpit in seconds.*
+
+| Rubric area | How PathWise addresses it |
+|---|---|
+| **Accuracy & Relevance** | Foundry IQ citation-first retrieval; grounded quick actions on Learn; competency-specific queries in Simulator |
+| **Reasoning & Multi-step** | Visible `PLAN → RETRIEVE → GENERATE → VERIFY` loop with SSE agent timeline |
+| **Creativity & Originality** | **Career Simulator** — resume + JD → adaptive interview → gap lessons → 30/60/90 readiness report |
+| **UX & Presentation** | Agent Thinking panel, citation chips, per-user dashboard, dark/light polish, live Vercel demo |
+| **Reliability & Safety** | Grounding guard + scope refusal; Foundry ↔ Supabase failover; offline eval harness + dashboard eval card |
+| **Community vote** | Shareable Readiness Report; live link at [pathwise001.vercel.app](https://pathwise001.vercel.app/) |
+
+See [docs/COMPETITION.md](docs/COMPETITION.md) for the full judge-grade brief and [docs/COPILOT_NOTES.md](docs/COPILOT_NOTES.md) for the GitHub Copilot build narrative. Paste-ready project copy: [docs/SUBMISSION.md](docs/SUBMISSION.md).
 
 ## Deploy frontend (Vercel) — monorepo note
 
-Your old PathWise repo likely had `package.json` at the **repository root**, so Vercel auto-detected Next.js.
-
-This repo is a monorepo: Next.js lives in **`frontend/`**, so Vercel must be pointed there.
+This monorepo uses a **`frontend/`** + **`backend/`** layout. If Vercel was previously pointed at the repository root, set **Root Directory** to `frontend/`.
 
 ### Vercel project settings (required)
 
 In **Vercel → Project → Settings → General**:
 
-- **Root Directory**: `PathWise/frontend` (or `frontend` if your Git repo root is already `PathWise/`)
+- **Root Directory**: `frontend`
 - **Framework Preset**: Next.js (auto)
 - **Install Command**: `pnpm install --frozen-lockfile` (or leave default if you’re not using pnpm on Vercel)
 - **Build Command**: `pnpm build` (or `next build`)
@@ -303,17 +370,17 @@ After changing Root Directory or env vars, trigger a **Redeploy**.
 
 ### What the main backend modules do (high level)
 
+See [docs/backend/STRUCTURE.md](docs/backend/STRUCTURE.md) for the full tree. Key modules:
+
 - **`backend/main.py`**: FastAPI app + HTTP routes
-- **`backend/schemas.py`**: Pydantic request/response models
-- **`backend/distiller.py`**: PDF ingestion, chunking, embeddings, “learn” chat tooling
-- **`backend/study_agent.py`**: study/diagnostic agent orchestration
-- **`backend/learn_tools.py`**: helpers for generating/ingesting learning artifacts
-- **`backend/validators.py` / `backend/repairs.py`**: quality checks + repair passes for generated content
-- **`backend/mastery.py`**: lightweight mastery tracking (Supabase-backed when configured)
-- **`backend/supabase_helper.py`**: Supabase persistence helpers
-- **`backend/career_matcher.py` / `backend/unified_career_system.py`**: career matching + roadmap logic
-- **`backend/dashboard.py`**: dashboard-oriented recommendations/analytics glue
-- **`backend/data/`**: static datasets used by career + dashboard features
+- **`pathwise/schemas.py`**: Pydantic request/response models
+- **`pathwise/learn/`**: `distiller.py` (PDF + chat), `rag_kb.py` (Foundry/Supabase retrieval)
+- **`pathwise/career/`**: `career_simulator.py`, `resume_career.py`, `career_matcher.py`, `unified_career_system.py`
+- **`pathwise/dashboard/`**: `dashboard.py`, `mastery.py`
+- **`pathwise/infra/`**: `supabase_helper.py`, `foundry_iq.py`
+- **`pathwise/eval/`**: `eval_simulator.py`
+- **`backend/data/`**: O*NET CSV, career plan snapshots, eval reports
+- **`backend/knowledge_base/`**: grounding corpus synced to Foundry + Supabase
 
 ---
 
@@ -336,7 +403,7 @@ A comprehensive backend system for AI-powered career guidance and personalized l
 - **Embeddings**: Cohere (text-embedding-ada-002)
 - **Database**: Supabase (PostgreSQL)
 - **Vector Search**: pgvector extension
-- **Deployment**: VPS (Docker) / Render (`render.yaml`) / Heroku-style (`Procfile`)
+- **Deployment**: Hostinger VPS (Docker) + Vercel frontend; also Render (`render.yaml`) / Heroku-style (`Procfile`)
 
 ### Run the backend locally
 
@@ -366,8 +433,8 @@ Prereqs on the VPS: Docker + Docker Compose plugin (you already installed these 
 
 ```bash
 mkdir -p /opt/pathwise && cd /opt/pathwise
-git clone https://github.com/rahul370139/Backend_pathwise.git
-cd Backend_pathwise/backend
+git clone https://github.com/rahul370139/PathWise.git
+cd PathWise/backend
 ```
 
 4. Create `backend.env` next to `docker-compose.yml` (same folder as `backend/docker-compose.yml`):
@@ -385,6 +452,11 @@ GROQ_API_KEY=...
 COHERE_API_KEY=...
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+# Microsoft Foundry IQ (required for competition grounding)
+FOUNDRY_SEARCH_ENDPOINT=https://<your-search>.search.windows.net
+FOUNDRY_SEARCH_KEY=...
+FOUNDRY_INDEX=prepkb-index
+# Optional: CORS_ORIGINS=https://pathwise001.vercel.app
 ```
 
 5. Build + run:
@@ -406,225 +478,10 @@ Vercel serves your frontend on **HTTPS**. Browsers often block calling a plain *
 
 - `NEXT_PUBLIC_API_BASE_URL=https://api.yourdomain.com`
 
-## 🚀 Core Features
+## Further reading
 
-### 1. Learn Page - AI-Powered PDF Processing
-
-#### PDF Upload & Processing (`/api/chat/upload`)
-- **Chunking Strategy**: Intelligent text segmentation (500-800 chars) with overlap
-- **Embedding Generation**: Cohere embeddings for semantic search
-- **Content Analysis**: Automatic framework detection (Python, JavaScript, etc.)
-- **Summary Generation**: LLM-powered bullet-point summaries
-- **In-Memory Caching**: Stores processed content for session persistence
-
-#### Content Generation Endpoints
-- **Summary** (`/api/chat` + "create summary"): Key takeaways and insights
-- **Quiz** (`/api/chat` + "generate quiz"): Interactive questions with multiple choice
-- **Flashcards** (`/api/chat` + "create flashcards"): Front-back learning cards
-- **Micro-lessons** (`/api/chat` + "create lesson"): Structured learning content
-- **Workflows** (`/api/chat` + "create workflow"): Visual process diagrams (Mermaid)
-- **Concept Maps** (`/api/chat` + "create concept map"): Knowledge graph visualization
-
-#### Smart Content Generation
-- **Retrieval-Augmented Generation (RAG)**: Uses relevant PDF chunks as context
-- **Variable Item Counts**: Generate 5-20 quiz questions or flashcards on demand
-- **Explanation Levels**: Intern, Junior, Senior, Expert content adaptation
-- **Context-Aware**: Maintains conversation continuity across requests
-
-### 2. Career Page - Intelligent Career Guidance
-
-#### Career Matching System (`/api/career/match`)
-- **Multi-Dimensional Analysis**: Skills, interests, experience level, goals
-- **Skill Gap Analysis**: Identifies missing competencies for target roles
-- **Personality Alignment**: Work style and cultural fit assessment
-- **Market Demand**: Current industry trends and opportunities
-
-#### Career Roadmap Generation (`/api/career/roadmap`)
-- **Personalized Paths**: Custom learning journeys based on current state
-- **Skill Progression**: Logical skill development sequences
-- **Resource Recommendations**: Courses, projects, and certifications
-- **Timeline Estimation**: Realistic milestones and deadlines
-
-#### Skill Analysis & Recommendations
-- **Technical Skills**: Programming languages, frameworks, tools
-- **Soft Skills**: Communication, leadership, problem-solving
-- **Domain Knowledge**: Industry-specific expertise areas
-- **Learning Resources**: Curated content and practice materials
-
-### 3. Dashboard - Unified Learning Management
-
-#### Learning Progress Tracking
-- **Session Management**: Conversation and lesson persistence
-- **Content History**: Generated summaries, quizzes, and lessons
-- **Skill Development**: Progress tracking across learning paths
-- **Performance Analytics**: Quiz scores and learning metrics
-
-#### Content Management
-- **Lesson Organization**: Structured content hierarchy
-- **Search & Discovery**: Semantic search across uploaded materials
-- **Content Reuse**: Leverage previous generations for new requests
-- **Export Capabilities**: Download generated content and roadmaps
-
-## 🔧 Technical Implementation
-
-### LLM Integration
-- **Model**: Groq's llama-3.3-70b-versatile (optimized for quality)
-- **Temperature**: 0.3 (strict JSON adherence)
-- **Timeout**: 25 seconds with 2 retries
-- **Prompt Engineering**: Structured prompts for consistent outputs
-- **JSON Parsing**: Robust error handling for malformed responses
-
-### Vector Search & Retrieval
-- **Chunking**: Optimal text segmentation for context retrieval
-- **Embedding Dimensions**: 1536-dimensional vectors (Cohere)
-- **Similarity Search**: Cosine similarity for relevant content retrieval
-- **Context Window**: Intelligent chunk selection for LLM context
-
-### Caching Strategy
-- **In-Memory Store**: Session-based content caching
-- **Conversation Context**: Maintains file context across requests
-- **Generated Content**: Caches LLM outputs to reduce API calls
-- **User Sessions**: Persistent conversation tracking
-
-### Error Handling & Fallbacks
-- **Graceful Degradation**: Continues operation if Supabase fails
-- **Fallback Content**: Pre-generated responses for common failures
-- **Retry Logic**: Exponential backoff for transient errors
-- **Logging**: Comprehensive error tracking and debugging
-
-## 📡 API Endpoints
-
-### Learn Page Endpoints
-```
-POST /api/chat/upload              # PDF upload and processing
-POST /api/chat                     # Chat with AI (content generation)
-GET  /api/chat/lesson/{id}/content # Retrieve lesson content
-POST /api/chat/ingest-distilled    # Process extracted content
-```
-
-### Career Page Endpoints
-```
-POST /api/career/match             # Career matching analysis
-POST /api/career/roadmap           # Generate career roadmap
-GET  /api/career/skills            # Available skills list
-POST /api/career/analyze           # Skills and experience analysis
-```
-
-### Dashboard Endpoints
-```
-GET  /api/dashboard/user/{id}      # User dashboard data
-GET  /api/dashboard/lessons        # User's learning content
-GET  /api/dashboard/progress       # Learning progress metrics
-POST /api/dashboard/export         # Export learning data
-```
-
-## 🔄 Data Flow
-
-### PDF Processing Pipeline
-1. **Upload** → File validation and storage
-2. **Chunking** → Text segmentation with overlap
-3. **Embedding** → Vector generation for semantic search
-4. **Analysis** → Framework detection and summary generation
-5. **Caching** → Store processed content in memory
-6. **Persistence** → Optional Supabase storage
-
-### Content Generation Flow
-1. **User Request** → Natural language command
-2. **Context Retrieval** → Relevant PDF chunks via embeddings
-3. **LLM Generation** → Structured content creation
-4. **Response Formatting** → JSON payload with multiple formats
-5. **Frontend Rendering** → Interactive content display
-
-### Career Guidance Process
-1. **Profile Input** → Skills, experience, goals
-2. **Analysis Engine** → Multi-dimensional assessment
-3. **Recommendation Engine** → Career path suggestions
-4. **Roadmap Generation** → Personalized learning journey
-5. **Resource Curation** → Learning materials and milestones
-
-## 🎯 Key Features
-
-### Intelligent Content Generation
-- **Context-Aware**: Uses uploaded PDF content for relevant generation
-- **Adaptive Difficulty**: Adjusts content complexity based on user level
-- **Interactive Elements**: Quiz questions, flashcards, visual workflows
-- **Multi-Format Output**: JSON, text, and structured data formats
-
-### Career Intelligence
-- **Market-Aware**: Current industry trends and demand
-- **Skill Mapping**: Comprehensive skill taxonomy and relationships
-- **Personalization**: User-specific recommendations and paths
-- **Progress Tracking**: Learning milestones and achievements
-
-### Performance Optimization
-- **Async Processing**: Non-blocking API operations
-- **Smart Caching**: Reduce redundant LLM calls
-- **Batch Operations**: Efficient content processing
-- **Connection Pooling**: Optimized database interactions
-
-## 🔒 Security & Reliability
-
-### Data Protection
-- **User Isolation**: Strict user ID validation
-- **Content Privacy**: User-specific content storage
-- **API Rate Limiting**: Prevent abuse and ensure fairness
-- **Input Validation**: Comprehensive request sanitization
-
-### System Reliability
-- **Graceful Degradation**: Continues operation during partial failures
-- **Retry Mechanisms**: Automatic retry for transient errors
-- **Health Monitoring**: System status and performance metrics
-- **Backup Strategies**: Fallback content and error recovery
-
-## 🚀 Deployment
-
-### Environment Variables
-```bash
-GROQ_API_KEY=your_groq_api_key
-COHERE_API_KEY=your_cohere_api_key
-SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_key
-```
-
-## Frontend (Next.js)
-
-See `frontend/README.md` for setup and environment variables.
-
-### Railway Deployment
-- **Automatic Scaling**: Based on traffic and load
-- **Health Checks**: Continuous monitoring and restart
-- **Log Aggregation**: Centralized logging and debugging
-- **SSL Termination**: Automatic HTTPS configuration
-
-## 📊 Monitoring & Debugging
-
-### Logging Strategy
-- **Structured Logging**: JSON-formatted log entries
-- **Performance Metrics**: Response times and throughput
-- **Error Tracking**: Detailed error context and stack traces
-- **User Activity**: Request patterns and usage analytics
-
-### Debug Endpoints
-- **Health Check**: `/health` - System status
-- **Metrics**: `/metrics` - Performance indicators
-- **Debug Info**: `/debug` - Runtime information
-- **Test Mode**: Fallback responses for development
-
-## 🔮 Future Enhancements
-
-### Planned Features
-- **Multi-Language Support**: Internationalization and localization
-- **Advanced Analytics**: Learning pattern analysis and insights
-- **Collaborative Learning**: Group study and peer recommendations
-- **Mobile Optimization**: Progressive web app capabilities
-- **Integration APIs**: Third-party learning platform connections
-
-### Technical Improvements
-- **Vector Database**: Dedicated vector storage for better search
-- **Model Fine-tuning**: Custom LLM training for domain expertise
-- **Real-time Updates**: WebSocket support for live interactions
-- **Microservices**: Modular architecture for scalability
+Detailed API reference, data flows, and endpoint tables live in **[docs/backend/ARCHITECTURE.md](docs/backend/ARCHITECTURE.md)**. Frontend routes and Vercel setup: **[frontend/README.md](frontend/README.md)**.
 
 ---
 
-*This backend powers the PathWise platform, providing intelligent career guidance and personalized learning experiences through advanced AI and machine learning technologies.*
+*PathWise — Agents League Creative Apps submission. Microsoft Foundry IQ grounding · GitHub Copilot–assisted development.*

@@ -54,13 +54,14 @@ sys.path.insert(0, str(BACKEND))
 load_dotenv(BACKEND.parent / ".env")
 load_dotenv(BACKEND / ".env")
 
-from rag_kb import chunk_markdown  # reuse the existing chunker
+from pathwise.learn.rag_kb import chunk_markdown  # reuse the existing chunker
+from pathwise.paths import KB_DIR
 
 KEY_FIELD = os.getenv("FOUNDRY_FIELD_KEY", "uid")
 CONTENT_FIELD = os.getenv("FOUNDRY_FIELD_CONTENT", "content")
 SOURCE_FIELD = os.getenv("FOUNDRY_FIELD_SOURCE", "sourceUri")
 
-DEFAULT_SOURCE = BACKEND / "knowledge_base"
+DEFAULT_SOURCE = KB_DIR
 # Already present in the blob-backed index — re-pushing would duplicate.
 DEFAULT_SKIP = {"learning"}
 

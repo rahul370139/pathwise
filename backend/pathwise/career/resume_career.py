@@ -34,12 +34,12 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 from loguru import logger
 
-from distiller import (
+from pathwise.learn.distiller import (
     call_groq,
     pdf_to_text,
     _parse_json_safely,
 )
-from career_matcher import matcher  # already loads onet_bls_trimmed.csv
+from pathwise.career.career_matcher import matcher  # already loads onet_bls_trimmed.csv
 
 
 # ---------------------------------------------------------------------------

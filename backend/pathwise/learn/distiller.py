@@ -4,7 +4,8 @@ import io, os, json, asyncio, re
 import fitz  # PyMuPDF
 from loguru import logger
 import httpx
-from schemas import ExplanationLevel, Framework
+from pathwise.schemas import ExplanationLevel, Framework
+from pathwise.paths import DATA_DIR
 import uuid
 from datetime import datetime
 from dotenv import load_dotenv
@@ -380,7 +381,7 @@ def _load_micro_lessons_raw() -> List[Dict]:
     if _MICRO_LESSONS_RAW:
         return _MICRO_LESSONS_RAW
     try:
-        data_path = Path(__file__).parent / 'data' / 'micro_lessons.json'
+        data_path = DATA_DIR / 'micro_lessons.json'
         with open(data_path, 'r', encoding='utf-8') as f:
             raw = json.load(f)
         lessons: List[Dict] = []
@@ -969,9 +970,9 @@ async def _fetch_kb_grounding(query: str, top_k: int = 6) -> str:
     if not q:
         return ""
     try:
-        from rag_kb import retrieve_kb, format_kb_context
+        from pathwise.learn.rag_kb import retrieve, format_kb_context
 
-        matches = await retrieve_kb(q, top_k=top_k)
+        matches = await retrieve(q, top_k=top_k)
         if matches:
             return format_kb_context(matches, max_chars=6000)
     except Exception as e:
@@ -2019,7 +2020,7 @@ async def process_file_for_chat(file_path: Path, user_id: str, conversation_id: 
         })
         
         # NEW: Save to Supabase to create lesson_id for dashboard integration
-        from supabase_helper import insert_lesson, insert_cards, insert_concept_map
+        from pathwise.infra.supabase_helper import insert_lesson, insert_cards, insert_concept_map
         
         # Convert framework string to Framework enum if needed
         framework_enum = Framework.GENERIC

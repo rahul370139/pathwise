@@ -11,7 +11,7 @@ import json
 
 # Import existing functionality
 try:
-    from supabase_helper import fetch_mastery, update_mastery_row
+    from pathwise.infra.supabase_helper import fetch_mastery, update_mastery_row
 except ImportError:
     logger.warning("Could not import from supabase_helper, using local storage")
     # Local storage fallback

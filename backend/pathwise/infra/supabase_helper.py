@@ -2,7 +2,7 @@ import os, supabase, orjson
 from loguru import logger
 from datetime import datetime
 from typing import List, Dict, Optional
-from schemas import Framework, ExplanationLevel
+from pathwise.schemas import Framework, ExplanationLevel
 from uuid import UUID, uuid5, NAMESPACE_DNS
 from typing import Any
 

@@ -24,15 +24,16 @@ import time
 from pathlib import Path
 from typing import Dict, List
 
-from career_simulator import (
+from pathwise.career.career_simulator import (
     PlannerAgent,
     RetrievalAgent,
     InterviewerAgent,
     ScorerAgent,
     SafetyGuard,
 )
+from pathwise.paths import DATA_DIR
 
-OUT = Path(__file__).parent / "data" / "eval" / "simulator_eval_report.json"
+OUT = DATA_DIR / "eval" / "simulator_eval_report.json"
 
 # Inline fixtures avoid shipping PDF resumes. parsed_resume mirrors parse_resume().
 GOLDEN: List[Dict] = [

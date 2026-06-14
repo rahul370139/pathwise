@@ -63,6 +63,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import os
 import re
 import sys
@@ -71,8 +72,8 @@ from typing import Dict, List, Optional, Tuple
 
 from loguru import logger
 
-from distiller import cohere_embed, generate_content_embedding
-from supabase_helper import SUPA as _SUPA_ANON
+from pathwise.learn.distiller import cohere_embed, generate_content_embedding
+from pathwise.infra.supabase_helper import SUPA as _SUPA_ANON
 
 # Prefer a service-role client for ingestion when available (bypasses RLS).
 # Falls back to the anon client used elsewhere in the backend.
@@ -253,8 +254,66 @@ async def ingest_directory(directory: Path) -> Dict:
 
 
 # ---------------------------------------------------------------------------
-# Retrieval
+# Retrieval — unified Foundry IQ + Supabase with observable source
 # ---------------------------------------------------------------------------
+
+_last_retrieval: Dict = {
+    "provider": None,
+    "query": None,
+    "match_count": 0,
+    "foundry_configured": False,
+    "fallback_reason": None,
+    "timestamp": None,
+}
+
+
+def get_retrieval_status() -> Dict:
+    """Return the most recent unified retrieval audit (copy-safe)."""
+    out = dict(_last_retrieval)
+    try:
+        from pathwise.infra import foundry_iq as _fiq
+
+        out["foundry_configured"] = _fiq.foundry_is_configured()
+        out["foundry_last_error"] = _fiq.get_last_error()
+        if out["foundry_configured"]:
+            dns_ok, dns_msg = _fiq.check_endpoint_dns()
+            out["foundry_dns_ok"] = dns_ok
+            out["foundry_dns_message"] = dns_msg
+        else:
+            out["foundry_dns_ok"] = False
+            out["foundry_dns_message"] = "not configured"
+    except Exception:
+        out["foundry_configured"] = False
+    return out
+
+
+def _tag_matches(matches: List[Dict], provider: str) -> List[Dict]:
+    return [{**m, "retrieval_provider": provider} for m in matches]
+
+
+def _record_retrieval(
+    *,
+    provider: str,
+    query: str,
+    match_count: int,
+    fallback_reason: Optional[str] = None,
+) -> None:
+    from datetime import datetime, timezone
+
+    global _last_retrieval
+    _last_retrieval = {
+        "provider": provider,
+        "query": (query or "")[:200],
+        "match_count": match_count,
+        "foundry_configured": False,
+        "fallback_reason": fallback_reason,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+    logger.info(
+        f"[RAG:{provider}] query={query[:80]!r} matches={match_count}"
+        + (f" fallback={fallback_reason}" if fallback_reason else "")
+    )
+
 
 async def retrieve_kb(query: str, top_k: int = 6) -> List[Dict]:
     """Return the top-k KB chunks for a natural-language query.
@@ -314,22 +373,52 @@ def _client_side_topk(rows: List[Dict], q_embed: List[float], k: int) -> List[Di
 async def retrieve(query: str, top_k: int = 6) -> List[Dict]:
     """Unified grounded retrieval with provider failover.
 
-    Prefers Microsoft Foundry IQ when configured (the required Microsoft IQ
-    layer); otherwise falls back to the Supabase pgvector KB. Both paths return
-    the same item shape, so callers are provider-agnostic. This single
-    indirection is also the demo's reliability story (kill Foundry → Supabase).
+    Prefers Microsoft Foundry IQ when configured; otherwise Supabase pgvector.
+    Each chunk includes ``retrieval_provider`` (`foundry_iq` or `supabase_pgvector`).
     """
+    q = (query or "").strip()
+    if not q:
+        _record_retrieval(provider="none", query=q, match_count=0, fallback_reason="empty_query")
+        return []
+
+    reason: Optional[str] = None
     try:
-        import foundry_iq
+        from pathwise.infra import foundry_iq
 
         if foundry_iq.foundry_is_configured():
-            matches = await foundry_iq.retrieve(query, top_k)
+            matches = await foundry_iq.retrieve(q, top_k)
             if matches:
-                return matches
-            logger.info("Foundry IQ returned no matches; falling back to Supabase KB.")
-    except Exception as e:  # noqa: BLE001 - never let grounding take down a request
+                tagged = _tag_matches(matches, "foundry_iq")
+                _record_retrieval(provider="foundry_iq", query=q, match_count=len(tagged))
+                return tagged
+            err = foundry_iq.get_last_error()
+            if err and err != "foundry_empty":
+                reason = f"foundry_error:{err[:160]}"
+                logger.warning(f"Foundry IQ failed ({err}); falling back to Supabase KB.")
+            else:
+                reason = "foundry_empty"
+                logger.info("Foundry IQ returned no matches; falling back to Supabase KB.")
+        else:
+            reason = "foundry_not_configured"
+    except Exception as e:  # noqa: BLE001
+        reason = f"foundry_error:{type(e).__name__}"
         logger.warning(f"Foundry IQ unavailable ({e}); using Supabase KB.")
-    return await retrieve_kb(query, top_k)
+
+    kb_matches = await retrieve_kb(q, top_k)
+    tagged = _tag_matches(kb_matches, "supabase_pgvector")
+    _record_retrieval(
+        provider="supabase_pgvector",
+        query=q,
+        match_count=len(tagged),
+        fallback_reason=reason if tagged else (reason or "supabase_empty"),
+    )
+    return tagged
+
+
+async def retrieve_with_meta(query: str, top_k: int = 6) -> Tuple[List[Dict], Dict]:
+    """Like ``retrieve`` but also returns the audit dict for API/debug responses."""
+    matches = await retrieve(query, top_k=top_k)
+    return matches, get_retrieval_status()
 
 
 def format_kb_context(matches: List[Dict], max_chars: int = 6000) -> str:
@@ -364,8 +453,9 @@ def format_kb_context(matches: List[Dict], max_chars: int = 6000) -> str:
 def _print_help() -> None:
     print(
         "Usage:\n"
-        "  python -m rag_kb ingest <path-to-interview_prep>\n"
-        "  python -m rag_kb query  <natural language question>\n"
+        "  python -m pathwise.learn.rag_kb ingest <path-to-knowledge_base>\n"
+        "  python -m pathwise.learn.rag_kb query  <natural language question>\n"
+        "  python -m pathwise.learn.rag_kb probe   <question>  # shows Foundry vs Supabase\n"
     )
 
 
@@ -390,10 +480,22 @@ async def _main_async() -> int:
         if not q:
             _print_help()
             return 1
-        matches = await retrieve_kb(q, top_k=5)
+        matches, meta = await retrieve_with_meta(q, top_k=5)
+        print(f"provider={meta.get('provider')} foundry_configured={meta.get('foundry_configured')}")
+        if meta.get("fallback_reason"):
+            print(f"fallback_reason={meta.get('fallback_reason')}")
         for m in matches:
-            print(f"\n— {m.get('doc')} #{m.get('section')} (sim={m.get('similarity'):.3f})")
+            prov = m.get("retrieval_provider", "?")
+            print(f"\n— [{prov}] {m.get('doc')} #{m.get('section')} (sim={m.get('similarity', 0):.3f})")
             print(m.get("chunk", "")[:400])
+        return 0
+    if cmd == "probe":
+        q = " ".join(sys.argv[2:]).strip()
+        if not q:
+            _print_help()
+            return 1
+        matches, meta = await retrieve_with_meta(q, top_k=3)
+        print(json.dumps({"meta": meta, "sample_docs": [m.get("doc") for m in matches]}, indent=2))
         return 0
     _print_help()
     return 1

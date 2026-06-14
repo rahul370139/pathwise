@@ -19,13 +19,15 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+from pathwise.paths import DATA_DIR
+
 # RIASEC interest dimensions
 RIASEC = ["realistic", "investigative", "artistic", "social", "enterprising", "conventional"]
 
 class CareerMatcher:
     def __init__(self):
         """Initialize career matcher with data and AI capabilities"""
-        self.data_path = Path(__file__).parent / "data"
+        self.data_path = DATA_DIR
         
         # Load career data
         self.career_data = self._load_career_data()

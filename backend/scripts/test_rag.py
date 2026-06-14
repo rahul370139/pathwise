@@ -42,7 +42,7 @@ load_dotenv(ROOT.parent / ".env")
 load_dotenv(ROOT / ".env", override=False)
 
 
-DEFAULT_CORPUS = ROOT.parent.parent / "interview_prep"
+DEFAULT_CORPUS = ROOT / "knowledge_base"
 SAMPLE_QUERIES = [
     "What is retrieval-augmented generation and why does it matter?",
     "How do transformers handle long contexts?",
@@ -73,7 +73,7 @@ async def step_env() -> None:
 
 async def step_cohere() -> None:
     _section("2. Cohere embedding")
-    from distiller import cohere_embed
+    from pathwise.learn.distiller import cohere_embed
     out = await cohere_embed(["PathWise smoke test."])
     if not out or not out[0] or len(out[0]) != 384:
         print(f"  ✗ unexpected embedding shape: {len(out)} x {len(out[0]) if out else 0}")
@@ -83,7 +83,7 @@ async def step_cohere() -> None:
 
 def step_table() -> None:
     _section("3. Supabase table reachability")
-    from rag_kb import SUPA
+    from pathwise.learn.rag_kb import SUPA
     if SUPA is None:
         print("  ✗ Supabase client not initialized")
         sys.exit(1)
@@ -114,7 +114,7 @@ def _project_ref() -> str:
 
 def step_chunker(corpus: Path) -> None:
     _section("4. Markdown chunker")
-    from rag_kb import chunk_markdown
+    from pathwise.learn.rag_kb import chunk_markdown
     files = sorted(corpus.rglob("*.md"))
     if not files:
         print(f"  ✗ no markdown files at {corpus}")
@@ -128,7 +128,7 @@ def step_chunker(corpus: Path) -> None:
 
 async def step_ingest(corpus: Path) -> int:
     _section("5. Ingest (Cohere → Supabase)")
-    from rag_kb import ingest_directory
+    from pathwise.learn.rag_kb import ingest_directory
     print(f"  → corpus: {corpus}")
     print("    (this calls Cohere for every chunk; expect a few minutes on first run)")
     res = await ingest_directory(corpus)
@@ -141,10 +141,11 @@ async def step_ingest(corpus: Path) -> int:
 
 async def step_retrieve() -> None:
     _section("6. Retrieval")
-    from rag_kb import retrieve_kb, format_kb_context
+    from pathwise.learn.rag_kb import retrieve_with_meta, format_kb_context
     for q in SAMPLE_QUERIES:
         print(f"\n  Q: {q}")
-        matches = await retrieve_kb(q, top_k=3)
+        matches, meta = await retrieve_with_meta(q, top_k=3)
+        print(f"    provider={meta.get('provider')} foundry={meta.get('foundry_configured')}")
         if not matches:
             print("    (no matches — embeddings not yet stored?)")
             continue

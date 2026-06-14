@@ -1,13 +1,23 @@
 # PathWise - AI-Powered Microlearning Platform
 
-A modern, intelligent microlearning platform built with Next.js 14, TypeScript, and AI integration to provide personalized learning experiences.
+A modern, intelligent microlearning and career-readiness platform built with Next.js 14, TypeScript, and multi-agent AI — submitted for the **GitHub Copilot Creative Apps** track.
+
+**Pitch:** *Drop in any PDF or paste a job posting — PathWise turns it into personalized learning content and a live Career Simulator cockpit in seconds.*
 
 Demo Preview: https://pathwise001.vercel.app/
 
-Backend Repo: https://github.com/rahul370139/Backend_pathwise
+Backend repo: https://github.com/rahul370139/PathWise
 
 
 ## 🚀 Features
+
+### Career Simulator (headline feature)
+- **Multi-agent interview**: Resume + job description → adaptive Q&A with rubric scoring
+- **Agent Thinking panel**: Live SSE timeline (plan → retrieve → verify) with citation chips
+- **Microsoft Foundry IQ**: Citation-backed grounding via Azure AI Search (Supabase fallback)
+- **Readiness Report**: Top gaps, 30/60/90 plan, exportable report card
+- **O*NET quiz fallback**: "Not sure?" career matching when user skips role selection
+- **Deep links to Learn**: Weak competencies open `/learn?topic=...` for targeted micro-lessons
 
 ### Core Learning Features
 - **AI-Powered Learning**: Intelligent content analysis and personalized learning paths
@@ -28,10 +38,10 @@ Backend Repo: https://github.com/rahul370139/Backend_pathwise
 - **Learning Settings**: Customizable experience level and framework preferences
 
 ### Authentication & User Management
-- **Supabase Integration**: Secure authentication and user management
-- **Social Login**: Multiple authentication providers
-- **User Profiles**: Personalized user experience and progress tracking
-- **Session Management**: Secure session handling and persistence
+- **Supabase Integration**: Magic-link authentication and per-user sessions
+- **User Profiles**: Account, privacy, payments, and settings tabs at `/profile`
+- **Per-user Dashboard**: Signed-in users see real progress (not demo data); guests see sample analytics
+- **Session Management**: Secure session handling via Supabase Auth
 
 ## 📱 Pages & Routes
 
@@ -55,8 +65,10 @@ Backend Repo: https://github.com/rahul370139/Backend_pathwise
 - **Lucide React**: Beautiful icon library
 
 ### AI & Backend Integration
-- **OpenAI Integration**: AI-powered content generation and analysis
-- **Supabase**: Backend-as-a-Service for authentication and data
+- **Groq LLM**: Fast structured generation (lessons, quizzes, interview questions)
+- **Microsoft Foundry IQ**: Azure AI Search knowledge base for citation-first RAG
+- **Cohere Embeddings**: Semantic retrieval (384-dim, shared with Supabase pgvector fallback)
+- **Supabase**: Auth, Postgres persistence, pgvector KB failover
 - **React Markdown**: Markdown rendering for content display
 - **Remark GFM**: GitHub Flavored Markdown support
 
@@ -75,6 +87,9 @@ Backend Repo: https://github.com/rahul370139/Backend_pathwise
 - **Modals**: Overlay components for user interactions
 
 ### Specialized Components
+- **Agent Thinking Panel**: SSE-streamed multi-agent timeline with citation chips
+- **Readiness Report**: Career Simulator output — gaps, roadmap, export
+- **Eval Card**: Groundedness / refusal / latency metrics from `/api/simulator/eval`
 - **Lesson Display**: Interactive lesson viewer with progress tracking
 - **Flashcard Player**: Animated flashcard interface
 - **Quiz Player**: Interactive quiz interface with scoring
@@ -100,8 +115,9 @@ Backend Repo: https://github.com/rahul370139/Backend_pathwise
 ### Prerequisites
 - Node.js 18+ 
 - pnpm package manager
-- Supabase account for backend services
-- OpenAI API key for AI features
+- Supabase account (auth + optional pgvector KB)
+- Groq + Cohere API keys (backend)
+- Azure AI Search / Foundry IQ index (backend — see `backend/scripts/push_to_foundry.py`)
 
 ### Installation
 ```bash
@@ -133,6 +149,14 @@ API_PROXY_TARGET=http://127.0.0.1:8000
 ```
 
 Production on Vercel also needs `API_PROXY_TARGET` pointing at your Hostinger backend, plus Supabase redirect URLs for `/auth/callback`.
+
+## 🏆 Competition & deployment
+
+- **Track**: GitHub Copilot Creative Apps
+- **Microsoft IQ**: Foundry IQ (`pathwise/infra/foundry_iq.py`) — required grounding layer
+- **Frontend**: Vercel (`frontend/vercel.json`, root dir `frontend/`)
+- **Backend**: Hostinger VPS Docker (`backend/docker-compose.yml`)
+- **Docs**: [../docs/COMPETITION.md](../docs/COMPETITION.md), [../docs/COPILOT_NOTES.md](../docs/COPILOT_NOTES.md), [../docs/backend/ARCHITECTURE.md](../docs/backend/ARCHITECTURE.md), [../docs/SUBMISSION.md](../docs/SUBMISSION.md)
 
 ## 📊 Learning Analytics
 
