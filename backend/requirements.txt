@@ -1,0 +1,18 @@
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-dotenv==1.0.1
+python-multipart==0.0.9
+loguru==0.7.2
+pydantic==2.11.7
+supabase==2.9.1
+orjson==3.11.1
+pandas>=1.5.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+PyMuPDF==1.23.25
+groq==0.5.0
+httpx>=0.25.0
+# Microsoft Foundry IQ grounding (Azure AI Search). Required for the
+# Foundry-backed retrieval path in foundry_iq.py; falls back to Supabase if absent.
+azure-search-documents>=11.5.0
+azure-identity>=1.16.0 

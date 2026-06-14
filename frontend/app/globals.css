@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   Design tokens. Every token the Tailwind config references is defined here,
+   for BOTH light and dark. Missing tokens resolve to transparent — which was
+   the cause of (a) the dark-mode "everything goes black" issue and
+   (b) the Learn drill-down popovers overlapping/transparent with text.
+   Palette is blue-forward; dark mode is a deep navy-slate, never pure black.
+--------------------------------------------------------------------------- */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 221 83% 53%;            /* blue */
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 214 32% 95%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 214 32% 95%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 214 95% 93%;             /* soft blue */
+    --accent-foreground: 221 83% 33%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+    --radius: 0.75rem;
+
+    --chart-1: 221 83% 53%;
+    --chart-2: 199 89% 48%;
+    --chart-3: 262 83% 58%;
+    --chart-4: 160 84% 39%;
+    --chart-5: 38 92% 50%;
+  }
+
+  .dark {
+    --background: 222 47% 9%;          /* deep navy-slate, not black */
+    --foreground: 210 40% 98%;
+
+    --card: 222 44% 13%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 44% 13%;            /* solid so dropdowns/drill-downs aren't transparent */
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;            /* bright blue */
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 18%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 24%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 22%;
+    --input: 217 33% 24%;
+    --ring: 217 91% 60%;
+
+    --chart-1: 217 91% 60%;
+    --chart-2: 199 89% 58%;
+    --chart-3: 262 83% 68%;
+    --chart-4: 160 74% 49%;
+    --chart-5: 38 92% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* re-usable components */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2
+           text-primary-foreground transition-colors hover:bg-primary/90;
+  }
+}
+
+/* misc utilities */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  /* 3D flip helpers used by flashcards (were referenced but never defined,
+     which let both card faces render on top of each other). */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .backface-hidden {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+}
