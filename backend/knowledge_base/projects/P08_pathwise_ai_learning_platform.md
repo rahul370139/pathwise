@@ -19,7 +19,7 @@
 
 ### Agents League build (Creative Apps track, 2026)
 
-PathWise was built for the **GitHub Copilot Creative Apps** track with these core capabilities (see [../../docs/COMPETITION.md](../../docs/COMPETITION.md) for internal planning notes):
+PathWise was built for the **GitHub Copilot Creative Apps** track with these core capabilities (see [../../docs/backend/ARCHITECTURE.md](../../docs/backend/ARCHITECTURE.md) for the system design):
 
 | Enhancement | Implementation |
 |---|---|

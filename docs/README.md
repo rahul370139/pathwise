@@ -4,8 +4,8 @@ Documentation for the **Agents League Hackathon — Creative Apps (GitHub Copilo
 
 | Document | Audience | Purpose |
 |---|---|---|
+| [backend/ARCHITECTURE.md](./backend/ARCHITECTURE.md) | Judges & developers | End-to-end architecture, Foundry IQ, Career Simulator, endpoints |
 | [COPILOT_NOTES.md](./COPILOT_NOTES.md) | Creative Apps judges | Where GitHub Copilot accelerated the build |
-| [COMPETITION.md](./COMPETITION.md) | Internal / deep dive | Rubric mapping, gap analysis, implementation brief |
 | [backend/ARCHITECTURE.md](./backend/ARCHITECTURE.md) | Backend developers | Module flows, endpoints, Foundry IQ, Career Simulator |
 | [backend/STRUCTURE.md](./backend/STRUCTURE.md) | Backend developers | Package tree, CLI probes, retrieval observability |
 

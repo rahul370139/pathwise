@@ -135,6 +135,7 @@ Full VPS + Vercel checklist: [../README.md](../README.md).
 
 | Doc | Description |
 |---|---|
+| [../docs/backend/ARCHITECTURE.md](../docs/backend/ARCHITECTURE.md) | System architecture, endpoints, Foundry IQ |
 | [../docs/COPILOT_NOTES.md](../docs/COPILOT_NOTES.md) | GitHub Copilot build narrative |
 | [../docs/backend/ARCHITECTURE.md](../docs/backend/ARCHITECTURE.md) | Flows, modules, endpoints |
 | [../docs/backend/STRUCTURE.md](../docs/backend/STRUCTURE.md) | Directory tree + CLI |

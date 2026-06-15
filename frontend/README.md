@@ -156,7 +156,7 @@ Production on Vercel also needs `API_PROXY_TARGET=http://2.24.74.235:8000`, `NEX
 - **Microsoft IQ**: Foundry IQ (`pathwise/infra/foundry_iq.py`) — required grounding layer
 - **Frontend**: Vercel (`frontend/vercel.json`, root dir `frontend/`)
 - **Backend**: Hostinger VPS Docker (`backend/docker-compose.yml`)
-- **Docs**: [../docs/COMPETITION.md](../docs/COMPETITION.md), [../docs/COPILOT_NOTES.md](../docs/COPILOT_NOTES.md), [../docs/backend/ARCHITECTURE.md](../docs/backend/ARCHITECTURE.md)
+- **Docs**: [../docs/backend/ARCHITECTURE.md](../docs/backend/ARCHITECTURE.md), [../docs/COPILOT_NOTES.md](../docs/COPILOT_NOTES.md)
 
 ## 📊 Learning Analytics
 

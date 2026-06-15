@@ -13,7 +13,6 @@ Monorepo for PathWise — an AI-powered learning and career-readiness platform b
 | Doc | Purpose |
 |---|---|
 | [docs/COPILOT_NOTES.md](docs/COPILOT_NOTES.md) | GitHub Copilot build narrative |
-| [docs/COMPETITION.md](docs/COMPETITION.md) | Rubric mapping & implementation brief |
 | [docs/backend/ARCHITECTURE.md](docs/backend/ARCHITECTURE.md) | Backend flows, endpoints, Foundry IQ |
 | [docs/backend/STRUCTURE.md](docs/backend/STRUCTURE.md) | `pathwise/` package tree & CLI probes |
 
@@ -337,7 +336,7 @@ The single diagram above covers all paths; this section maps each product surfac
 | **Reliability & Safety** | Grounding guard + scope refusal; Foundry ↔ Supabase failover; offline eval harness + dashboard eval card |
 | **Community vote** | Shareable Readiness Report; live link at [pathwise-jade.vercel.app](https://pathwise-jade.vercel.app/) |
 
-See [docs/COMPETITION.md](docs/COMPETITION.md) for the full judge-grade brief and [docs/COPILOT_NOTES.md](docs/COPILOT_NOTES.md) for the GitHub Copilot build narrative.
+See [docs/backend/ARCHITECTURE.md](docs/backend/ARCHITECTURE.md) for the full system design and [docs/COPILOT_NOTES.md](docs/COPILOT_NOTES.md) for the GitHub Copilot build narrative.
 
 ## Deploy frontend (Vercel) — monorepo note
 
