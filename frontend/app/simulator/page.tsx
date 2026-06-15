@@ -29,6 +29,7 @@ import {
   FileText,
   MessagesSquare,
   CheckCircle2,
+  RotateCcw,
 } from "lucide-react"
 
 type Step = "upload" | "interview" | "report"
@@ -124,6 +125,7 @@ export default function SimulatorPage() {
   const [showComment, setShowComment] = useState(false)
   const [lastFeedback, setLastFeedback] = useState<any>(null)
   const [report, setReport] = useState<any>(null)
+  const [confirmRestart, setConfirmRestart] = useState(false)
 
   const toggleInterest = (i: string) =>
     setInterests((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]))
@@ -165,7 +167,9 @@ export default function SimulatorPage() {
     setReport(null)
     setAnswer("")
     setComment("")
+    setShowComment(false)
     setLastFeedback(null)
+    setConfirmRestart(false)
     setFile(null)
     setJdText("")
     setTargetRole("")
@@ -294,7 +298,32 @@ export default function SimulatorPage() {
         roadmap, 30/60/90-day plan, projects, resources, and interview prep.
       </p>
 
-      <Stepper step={step} className="mb-6" />
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <Stepper step={step} />
+        {step !== "upload" &&
+          (confirmRestart ? (
+            <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-1.5">
+              <span className="text-xs text-muted-foreground">Discard this session?</span>
+              <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setConfirmRestart(false)}>
+                Cancel
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 px-2" onClick={resetSimulator}>
+                Yes, start over
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-muted-foreground hover:text-foreground"
+              disabled={loading}
+              onClick={() => setConfirmRestart(true)}
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+              Start over
+            </Button>
+          ))}
+      </div>
 
       {error && (
         <Card className="p-3 mb-4 border-red-300 bg-red-50 dark:bg-red-950/30">
@@ -569,11 +598,6 @@ export default function SimulatorPage() {
       {step === "report" && report && (
         <div className="grid md:grid-cols-3 gap-4">
           <div className="md:col-span-2 space-y-3">
-            <div className="flex justify-end">
-              <Button variant="outline" size="sm" onClick={resetSimulator}>
-                Start over
-              </Button>
-            </div>
             <ReadinessReport report={report} userName={user?.email?.split("@")[0]} />
           </div>
           <div className="md:col-span-1 space-y-4">
