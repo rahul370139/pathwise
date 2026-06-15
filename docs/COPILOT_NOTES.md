@@ -92,7 +92,7 @@ cd ../frontend && pnpm install && pnpm dev
 | Grounding | **Azure AI Search** | Index `prepkb-index`; corpus via `scripts/push_to_foundry.py` |
 | Auth | **Supabase** | Magic links; redirect URLs must include `/auth/callback` |
 
-Full checklists: [../README.md](../README.md) · [SUBMISSION.md](./SUBMISSION.md)
+Full checklists: [../README.md](../README.md)
 
 ---
 

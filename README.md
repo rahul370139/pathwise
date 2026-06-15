@@ -6,14 +6,12 @@ Monorepo for PathWise — an AI-powered learning and career-readiness platform b
 - **Frontend**: `frontend/` (Next.js 14 on Vercel) — [frontend/README.md](frontend/README.md)
 - **Live frontend**: [pathwise-jade.vercel.app](https://pathwise-jade.vercel.app/)
 - **Live backend**: [http://2.24.74.235:8000](http://2.24.74.235:8000/) (API docs at `/docs`)
-- **Hackathon submission copy**: [docs/SUBMISSION.md](docs/SUBMISSION.md)
 - **All documentation**: [docs/README.md](docs/README.md)
 
 ## Documentation
 
 | Doc | Purpose |
 |---|---|
-| [docs/SUBMISSION.md](docs/SUBMISSION.md) | **Project page** — pitch, track, Foundry IQ, demo script |
 | [docs/COPILOT_NOTES.md](docs/COPILOT_NOTES.md) | GitHub Copilot build narrative |
 | [docs/COMPETITION.md](docs/COMPETITION.md) | Rubric mapping & implementation brief |
 | [docs/backend/ARCHITECTURE.md](docs/backend/ARCHITECTURE.md) | Backend flows, endpoints, Foundry IQ |
@@ -339,7 +337,7 @@ The single diagram above covers all paths; this section maps each product surfac
 | **Reliability & Safety** | Grounding guard + scope refusal; Foundry ↔ Supabase failover; offline eval harness + dashboard eval card |
 | **Community vote** | Shareable Readiness Report; live link at [pathwise-jade.vercel.app](https://pathwise-jade.vercel.app/) |
 
-See [docs/COMPETITION.md](docs/COMPETITION.md) for the full judge-grade brief and [docs/COPILOT_NOTES.md](docs/COPILOT_NOTES.md) for the GitHub Copilot build narrative. Paste-ready project copy: [docs/SUBMISSION.md](docs/SUBMISSION.md).
+See [docs/COMPETITION.md](docs/COMPETITION.md) for the full judge-grade brief and [docs/COPILOT_NOTES.md](docs/COPILOT_NOTES.md) for the GitHub Copilot build narrative.
 
 ## Deploy frontend (Vercel) — monorepo note
 

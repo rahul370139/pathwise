@@ -15,11 +15,10 @@ import { Achievements } from "@/components/dashboard/achievements"
 import { Recommendations } from "@/components/dashboard/recommendations"
 import { AnalyticsCharts } from "@/components/dashboard/analytics-charts"
 import { EvalCard } from "@/components/eval-card"
-import { RefreshCw, LogIn } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import type { DashboardData } from "@/types/dashboard"
 import { Suspense } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 // API Functions with error handling
 const updateUserRole = async (userId: string, role: string) => {
@@ -320,7 +319,7 @@ export default function DashboardPage() {
   // @supabase/auth-helpers-react silently returned null because the app
   // doesn't mount a SessionContextProvider — that's why every signed-in user
   // saw mock data on this page.
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   const fetchDashboardData = useCallback(
     async (showRefreshToast = false) => {
@@ -480,11 +479,6 @@ export default function DashboardPage() {
     (user?.user_metadata?.full_name as string | undefined) ||
     (user?.user_metadata?.name as string | undefined) ||
     (user?.email ? user.email.split("@")[0] : "")
-  const avatarUrl =
-    (user?.user_metadata?.avatar_url as string | undefined) ||
-    (user?.user_metadata?.picture as string | undefined) ||
-    "/placeholder-user.jpg"
-  const initials = (displayName || user?.email || "G").slice(0, 2).toUpperCase()
 
   return (
     <div className="flex-1 p-4 md:p-8">
@@ -508,24 +502,6 @@ export default function DashboardPage() {
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
             {isRefreshing ? "Refreshing…" : "Refresh"}
           </Button>
-          {isSignedIn ? (
-            <Button variant="ghost" size="sm" onClick={() => void signOut()}>
-              Sign out
-            </Button>
-          ) : (
-            <Button asChild size="sm">
-              <Link href="/login">
-                <LogIn className="h-4 w-4 mr-2" />
-                Sign in
-              </Link>
-            </Button>
-          )}
-          <Avatar className="h-9 w-9">
-            <AvatarImage src={avatarUrl} />
-            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
         </div>
       </div>
 

@@ -135,7 +135,6 @@ Full VPS + Vercel checklist: [../README.md](../README.md).
 
 | Doc | Description |
 |---|---|
-| [../docs/SUBMISSION.md](../docs/SUBMISSION.md) | Hackathon project page copy |
 | [../docs/COPILOT_NOTES.md](../docs/COPILOT_NOTES.md) | GitHub Copilot build narrative |
 | [../docs/backend/ARCHITECTURE.md](../docs/backend/ARCHITECTURE.md) | Flows, modules, endpoints |
 | [../docs/backend/STRUCTURE.md](../docs/backend/STRUCTURE.md) | Directory tree + CLI |
