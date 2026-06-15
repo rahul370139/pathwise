@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+export { getAuthCallbackUrl } from "@/lib/site-url"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -21,13 +22,3 @@ function createSupabaseClient(): SupabaseClient {
 
 /** Browser client — implicit magic-link flow (tokens arrive in callback URL hash). */
 export const supabase = createSupabaseClient()
-
-/** Redirect URL for magic links — always matches the current deployment origin. */
-export function getAuthCallbackUrl(): string {
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}/auth/callback`
-  }
-  return process.env.NEXT_PUBLIC_SITE_URL
-    ? `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, "")}/auth/callback`
-    : "http://localhost:3000/auth/callback"
-}

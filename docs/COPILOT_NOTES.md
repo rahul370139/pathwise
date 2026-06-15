@@ -87,8 +87,8 @@ cd ../frontend && pnpm install && pnpm dev
 
 | Layer | Host | Notes |
 |---|---|---|
-| Frontend | **Vercel** | Root dir `frontend/`; `API_PROXY_TARGET` → VPS backend |
-| Backend | **Hostinger VPS** | `docker compose up -d --build`; secrets in `backend.env` |
+| Frontend | **Vercel** | [pathwise-jade.vercel.app](https://pathwise-jade.vercel.app/) — root dir `frontend/`; `API_PROXY_TARGET=http://2.24.74.235:8000` |
+| Backend | **Hostinger VPS** | [http://2.24.74.235:8000](http://2.24.74.235:8000/) — `docker compose up -d --build`; secrets in `backend.env` |
 | Grounding | **Azure AI Search** | Index `prepkb-index`; corpus via `scripts/push_to_foundry.py` |
 | Auth | **Supabase** | Magic links; redirect URLs must include `/auth/callback` |
 

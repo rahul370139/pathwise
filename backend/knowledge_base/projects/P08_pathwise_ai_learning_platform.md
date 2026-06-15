@@ -1,7 +1,7 @@
 # P08: PathWise (PathWise) - AI-Powered Career Guidance & Learning Platform
 
 > **Project Type:** Self-Project | **Timeline:** Summer 2025
-> **Live Demo:** [pathwise001.vercel.app](https://pathwise001.vercel.app/)
+> **Live Demo:** [pathwise-jade.vercel.app](https://pathwise-jade.vercel.app/)
 > **GitHub:** [github.com/rahul370139/PathWise](https://github.com/rahul370139/PathWise)
 
 ---
@@ -119,7 +119,7 @@ async def _startup():
 # CORS middleware allows Vercel frontend + localhost dev
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://v0-frontend-opal-nine.vercel.app", "http://localhost:3000", "*"],
+    allow_origins=["https://pathwise-jade.vercel.app", "http://localhost:3000", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

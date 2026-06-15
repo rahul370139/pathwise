@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { supabase, getAuthCallbackUrl } from "@/lib/supabase"
+import { getAuthCallbackUrl } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -58,22 +58,27 @@ function LoginForm() {
     setSent(false)
 
     try {
-      const { error: authError } = await supabase.auth.signInWithOtp({
-        email: trimmed,
-        options: {
-          emailRedirectTo: getAuthCallbackUrl(),
-          shouldCreateUser: true,
-        },
+      const res = await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
       })
+      const payload = (await res.json()) as {
+        error?: string
+        code?: string
+        emailRedirectTo?: string
+      }
 
-      if (authError) {
-        const err = authError as { message?: string; code?: string; error_code?: string }
-        setError(
-          friendlyAuthError(
-            err.message ?? "Failed to send magic link",
-            err.code ?? err.error_code,
-          ),
-        )
+      if (!res.ok) {
+        const callback = payload.emailRedirectTo ?? getAuthCallbackUrl()
+        const msg = payload.error ?? "Failed to send magic link"
+        if (msg.toLowerCase().includes("redirect")) {
+          setError(
+            `This app URL is not allowed in Supabase. Set Site URL to https://pathwise-jade.vercel.app and add ${callback} under Authentication → URL configuration → Redirect URLs.`,
+          )
+        } else {
+          setError(friendlyAuthError(msg, payload.code))
+        }
         return
       }
 

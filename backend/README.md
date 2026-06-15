@@ -2,7 +2,7 @@
 
 FastAPI service for PathWise — PDF distillation, Foundry IQ–grounded RAG, Career Simulator, career matching, and dashboard APIs.
 
-**Live API docs:** `/docs` when running locally · **Deep dive:** [../docs/backend/ARCHITECTURE.md](../docs/backend/ARCHITECTURE.md) · **Package tree:** [../docs/backend/STRUCTURE.md](../docs/backend/STRUCTURE.md)
+**Live API:** [http://2.24.74.235:8000](http://2.24.74.235:8000/) (docs at `/docs`) · **Deep dive:** [../docs/backend/ARCHITECTURE.md](../docs/backend/ARCHITECTURE.md) · **Package tree:** [../docs/backend/STRUCTURE.md](../docs/backend/STRUCTURE.md)
 
 ---
 

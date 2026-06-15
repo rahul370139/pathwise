@@ -104,10 +104,8 @@ async def get_role_based_recommendations(user_id: str, role: str, experience_lev
 app = FastAPI(title="PathWise API")
 
 _default_cors_origins = [
-    "https://pathwise001.vercel.app",
-    "https://pathwise001.vercel.app/",
-    "https://v0-frontend-opal-nine.vercel.app",
-    "https://v0-frontend-opal-nine.vercel.app/",
+    "https://pathwise-jade.vercel.app",
+    "https://pathwise-jade.vercel.app/",
     "http://localhost:3000",
     "http://localhost:3001",
     "http://127.0.0.1:3000",

@@ -4,7 +4,8 @@ Monorepo for PathWise — an AI-powered learning and career-readiness platform b
 
 - **Backend**: `backend/` (FastAPI on Hostinger VPS) — [backend/README.md](backend/README.md)
 - **Frontend**: `frontend/` (Next.js 14 on Vercel) — [frontend/README.md](frontend/README.md)
-- **Live demo**: [pathwise001.vercel.app](https://pathwise001.vercel.app/)
+- **Live frontend**: [pathwise-jade.vercel.app](https://pathwise-jade.vercel.app/)
+- **Live backend**: [http://2.24.74.235:8000](http://2.24.74.235:8000/) (API docs at `/docs`)
 - **Hackathon submission copy**: [docs/SUBMISSION.md](docs/SUBMISSION.md)
 - **All documentation**: [docs/README.md](docs/README.md)
 
@@ -336,7 +337,7 @@ The single diagram above covers all paths; this section maps each product surfac
 | **Creativity & Originality** | **Career Simulator** — resume + JD → adaptive interview → gap lessons → 30/60/90 readiness report |
 | **UX & Presentation** | Agent Thinking panel, citation chips, per-user dashboard, dark/light polish, live Vercel demo |
 | **Reliability & Safety** | Grounding guard + scope refusal; Foundry ↔ Supabase failover; offline eval harness + dashboard eval card |
-| **Community vote** | Shareable Readiness Report; live link at [pathwise001.vercel.app](https://pathwise001.vercel.app/) |
+| **Community vote** | Shareable Readiness Report; live link at [pathwise-jade.vercel.app](https://pathwise-jade.vercel.app/) |
 
 See [docs/COMPETITION.md](docs/COMPETITION.md) for the full judge-grade brief and [docs/COPILOT_NOTES.md](docs/COPILOT_NOTES.md) for the GitHub Copilot build narrative. Paste-ready project copy: [docs/SUBMISSION.md](docs/SUBMISSION.md).
 
@@ -357,14 +358,14 @@ In **Vercel → Project → Settings → General**:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `API_PROXY_TARGET` — Hostinger/VPS backend URL (e.g. `http://YOUR_VPS_IP:8000`). Next.js rewrites proxy `/api/*` and `/health` through Vercel so the browser avoids mixed-content blocks on HTTPS.
+- `API_PROXY_TARGET` — Hostinger/VPS backend URL (`http://2.24.74.235:8000`). Next.js rewrites proxy `/api/*` and `/health` through Vercel so the browser avoids mixed-content blocks on HTTPS.
 - `NEXT_PUBLIC_API_BASE_URL` — same backend URL for local dev; on Vercel with plain HTTP backend, leave unset or set to the HTTP URL (the frontend auto-falls back to same-origin proxy when on HTTPS).
-- `NEXT_PUBLIC_SITE_URL` — optional; e.g. `https://pathwise001.vercel.app` (used for auth redirect hints during SSR).
+- `NEXT_PUBLIC_SITE_URL` — optional; e.g. `https://pathwise-jade.vercel.app` (used for auth redirect hints during SSR).
 
 **Supabase dashboard (Authentication → URL configuration):**
 
-- Site URL: `https://pathwise001.vercel.app`
-- Redirect URLs: `http://localhost:3000/auth/callback`, `https://pathwise001.vercel.app/auth/callback`
+- **Site URL:** `https://pathwise-jade.vercel.app` (must not stay as `http://localhost:3000` — magic links fall back to Site URL)
+- **Redirect URLs:** `https://pathwise-jade.vercel.app/auth/callback`, `http://localhost:3000/auth/callback` (for local dev)
 
 After changing Root Directory or env vars, trigger a **Redeploy**.
 
@@ -456,7 +457,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 FOUNDRY_SEARCH_ENDPOINT=https://<your-search>.search.windows.net
 FOUNDRY_SEARCH_KEY=...
 FOUNDRY_INDEX=prepkb-index
-# Optional: CORS_ORIGINS=https://pathwise001.vercel.app
+# Optional: CORS_ORIGINS=https://pathwise-jade.vercel.app
 ```
 
 5. Build + run:
@@ -469,8 +470,8 @@ docker logs -n 200 pathwise-backend
 
 6. Smoke test from your laptop:
 
-- `http://YOUR_VPS_IP:8000/health`
-- `http://YOUR_VPS_IP:8000/docs`
+- `http://2.24.74.235:8000/health`
+- `http://2.24.74.235:8000/docs`
 
 #### Vercel note (important)
 

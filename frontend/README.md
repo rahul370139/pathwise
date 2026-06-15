@@ -4,7 +4,7 @@ A modern, intelligent microlearning and career-readiness platform built with Nex
 
 **Pitch:** *Drop in any PDF or paste a job posting — PathWise turns it into personalized learning content and a live Career Simulator cockpit in seconds.*
 
-Demo Preview: https://pathwise001.vercel.app/
+Demo Preview: https://pathwise-jade.vercel.app/
 
 Backend repo: https://github.com/rahul370139/PathWise
 
@@ -148,7 +148,7 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 API_PROXY_TARGET=http://127.0.0.1:8000
 ```
 
-Production on Vercel also needs `API_PROXY_TARGET` pointing at your Hostinger backend, plus Supabase redirect URLs for `/auth/callback`.
+Production on Vercel also needs `API_PROXY_TARGET=http://2.24.74.235:8000`, `NEXT_PUBLIC_SITE_URL=https://pathwise-jade.vercel.app`, plus Supabase redirect URLs for `/auth/callback`.
 
 ## 🏆 Competition & deployment
 
@@ -180,4 +180,4 @@ Production on Vercel also needs `API_PROXY_TARGET` pointing at your Hostinger ba
 - **Collaborative Learning**: Group learning features
 - **Content Marketplace**: Third-party content integration
 
-Try out my demo here: https://pathwise001.vercel.app/
+Try out my demo here: https://pathwise-jade.vercel.app/

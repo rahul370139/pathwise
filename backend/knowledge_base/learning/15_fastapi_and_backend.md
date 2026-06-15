@@ -662,7 +662,7 @@ from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://v0-frontend-opal-nine.vercel.app",
+        "https://pathwise-jade.vercel.app",
         "http://localhost:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3000",
@@ -1617,7 +1617,7 @@ if hash_val in content_hash_to_lesson_id:
 
 ### Q5: "What is CORS and why is it needed?"
 
-> **Answer:** "CORS is a browser security mechanism that restricts cross-origin HTTP requests. When our React frontend at `v0-frontend-opal-nine.vercel.app` calls our API at `pathwise.railway.app`, the browser first sends an OPTIONS preflight request. Our API must respond with the appropriate `Access-Control-Allow-Origin` header listing the frontend's origin, or the browser blocks the request. In PathWise, I configured CORS middleware to whitelist our Vercel frontend, localhost ports for development, and set `allow_credentials=True` for authenticated requests. In production, you should never use `allow_origins=['*']` with credentials -- always whitelist specific origins."
+> **Answer:** "CORS is a browser security mechanism that restricts cross-origin HTTP requests. When our React frontend at `pathwise-jade.vercel.app` calls our API at `http://2.24.74.235:8000`, the browser first sends an OPTIONS preflight request. Our API must respond with the appropriate `Access-Control-Allow-Origin` header listing the frontend's origin, or the browser blocks the request. In PathWise, I configured CORS middleware to whitelist our Vercel frontend, localhost ports for development, and set `allow_credentials=True` for authenticated requests. In production, you should never use `allow_origins=['*']` with credentials -- always whitelist specific origins."
 
 ### Q6: "How do you handle errors in production APIs?"
 

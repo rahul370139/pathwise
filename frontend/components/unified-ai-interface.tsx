@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/components/auth-provider"
 import { chatAPI, agenticAPI } from "@/lib/api"
@@ -47,7 +47,14 @@ import {
   BarChart3,
   TrendingUp,
   Upload,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react"
+
+const CONTENT_ZOOM_MIN = 0.6
+const CONTENT_ZOOM_MAX = 1.4
+const CONTENT_ZOOM_STEP = 0.1
+const CONTENT_ZOOM_STORAGE_KEY = "pathwise_learn_content_zoom"
 
 interface Message {
   id: string
@@ -122,6 +129,7 @@ export function UnifiedAIInterface({
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [masteryData, setMasteryData] = useState<MasteryData | null>(null)
   const [uploadedPdfId, setUploadedPdfId] = useState<string | null>(null)
+  const [contentZoom, setContentZoom] = useState(1)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const internalFileInputRef = useRef<HTMLInputElement>(null)
   const { user } = useAuth()
@@ -129,6 +137,33 @@ export function UnifiedAIInterface({
   const focusSuffix = topicFocusTrim ? `\n\nTopic / focus area: ${topicFocusTrim}` : ""
   const explanationLevelApi =
     selectedLevel === "beginner" ? "5_year_old" : selectedLevel === "intermediate" ? "intern" : "senior"
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CONTENT_ZOOM_STORAGE_KEY)
+      if (saved) {
+        const parsed = parseFloat(saved)
+        if (!Number.isNaN(parsed)) {
+          setContentZoom(Math.min(CONTENT_ZOOM_MAX, Math.max(CONTENT_ZOOM_MIN, parsed)))
+        }
+      }
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CONTENT_ZOOM_STORAGE_KEY, String(contentZoom))
+    } catch {}
+  }, [contentZoom])
+
+  const adjustContentZoom = (delta: number) => {
+    setContentZoom((prev) => {
+      const next = Math.round((prev + delta) * 10) / 10
+      return Math.min(CONTENT_ZOOM_MAX, Math.max(CONTENT_ZOOM_MIN, next))
+    })
+  }
+
+  const resetContentZoom = () => setContentZoom(1)
 
   const buildChatPayload = (message: string, extra?: Record<string, unknown>) =>
     ({
@@ -1042,8 +1077,50 @@ export function UnifiedAIInterface({
         </div>
       ) : (
         <>
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b bg-muted/20 shrink-0">
+            <span className="text-xs text-muted-foreground">Adjust view to fit quizzes & lessons</span>
+            <div className="flex items-center gap-0.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => adjustContentZoom(-CONTENT_ZOOM_STEP)}
+                disabled={contentZoom <= CONTENT_ZOOM_MIN}
+                title="Zoom out"
+                aria-label="Zoom out"
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <button
+                type="button"
+                className="min-w-[2.75rem] rounded px-1.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                onClick={resetContentZoom}
+                title="Reset zoom to 100%"
+              >
+                {Math.round(contentZoom * 100)}%
+              </button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => adjustContentZoom(CONTENT_ZOOM_STEP)}
+                disabled={contentZoom >= CONTENT_ZOOM_MAX}
+                title="Zoom in"
+                aria-label="Zoom in"
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
           <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0">
-            <div className="p-4 space-y-4">
+            <div
+              className="origin-top-left"
+              style={{ zoom: contentZoom }}
+            >
+              <div className="p-4 space-y-4">
               {messages.length === 0 && (
                 <div className="text-center py-8">
                   <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -1129,7 +1206,9 @@ export function UnifiedAIInterface({
                   </div>
                 </div>
               )}
+              </div>
             </div>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
 
           {uploadedFiles.length > 0 && (
