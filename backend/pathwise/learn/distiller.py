@@ -849,10 +849,14 @@ def get_or_create_conversation(conversation_id: Optional[str], user_id: str) -> 
     if conversation_id and conversation_id in conversation_store:
         last_conversation_by_user[user_id] = conversation_id
         return conversation_id
-    # If FE didn't pass conversation_id, try to reuse the last conversation for this user
+    # If FE didn't pass conversation_id, reuse the last conversation only when it
+    # is not PDF-backed (otherwise "New chat" / topic-only mode keeps old resume text).
     existing = last_conversation_by_user.get(user_id)
     if existing and existing in conversation_store:
-        return existing
+        conv = conversation_store[existing]
+        has_pdf = bool(conv.get("file_context") or conv.get("chunks"))
+        if not has_pdf:
+            return existing
     
     new_conversation_id = str(uuid.uuid4())
     conversation_store[new_conversation_id] = {
@@ -1001,8 +1005,12 @@ async def _resolve_grounding(
     conv_id: str,
     topic: str,
     file_context: Optional[str],
+    study_focus: Optional[str] = None,
 ) -> str:
     """Unified RAG grounding used by all quick-action handlers (matches workflow)."""
+    # Learn-page Apply topic = KB mode; do not bleed an old uploaded PDF into quick actions.
+    if (study_focus or "").strip():
+        return await _fetch_kb_grounding(topic)
     has_pdf = bool(conversation_store.get(conv_id, {}).get("chunks"))
     if has_pdf:
         chunk_text = await _retrieve_pdf_chunks(conv_id, topic)
@@ -1250,7 +1258,7 @@ async def _handle_lesson_generation(
         current_pdf = metadata.get("current_pdf", {})
         framework = current_pdf.get("framework", "GENERIC")
 
-        ground = await _resolve_grounding(conv_id, topic, file_context)
+        ground = await _resolve_grounding(conv_id, topic, file_context, study_focus)
         plan_prompt = (
             f"Create a micro-learning plan for: {topic}\n"
             f"Framework Context: {framework}\n{get_explanation_prompt(explanation_level)}\n\n"
@@ -1315,7 +1323,7 @@ async def _handle_quiz_generation(
             "your document",
         )
 
-        ground = await _resolve_grounding(conv_id, topic, file_context)
+        ground = await _resolve_grounding(conv_id, topic, file_context, study_focus)
         desired_count = _extract_desired_count(message) or 5
         qa = await gen_flashcards_quiz(
             summary=topic,
@@ -1371,7 +1379,7 @@ async def _handle_flashcard_generation(
             "your document",
         )
 
-        ground = await _resolve_grounding(conv_id, topic, file_context)
+        ground = await _resolve_grounding(conv_id, topic, file_context, study_focus)
         desired_count = _extract_desired_count(message) or 5
         qa = await gen_flashcards_quiz(
             summary=topic,
@@ -1566,7 +1574,7 @@ async def _handle_workflow_generation(
             "the loaded material",
         )
 
-        ground = await _resolve_grounding(conv_id, topic, file_context)
+        ground = await _resolve_grounding(conv_id, topic, file_context, study_focus)
 
         prompt = (
             f"You are designing a process workflow for: {topic}.\n"
@@ -1732,7 +1740,7 @@ async def _handle_summary_generation(
             "your document",
         )
 
-        ground = await _resolve_grounding(conv_id, topic, file_context)
+        ground = await _resolve_grounding(conv_id, topic, file_context, study_focus)
         prompt = f"""
             Create a CONCISE summary with exactly 10 bullet points for: {topic}
 
@@ -1819,7 +1827,7 @@ async def _handle_diagnostic_generation(
             "this material",
         )
 
-        ground = await _resolve_grounding(conv_id, topic, file_context)
+        ground = await _resolve_grounding(conv_id, topic, file_context, study_focus)
 
         prompt = (
             f"Create a 10-question diagnostic assessment about: {topic}. "

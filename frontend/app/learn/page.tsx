@@ -69,8 +69,20 @@ export default function LearnPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [studyTopic, setStudyTopic] = useState("")
   const [chatPrefill, setChatPrefill] = useState("")
+  const [sessionKey, setSessionKey] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { user } = useAuth()
+
+  const resetLearnSession = () => {
+    setConversationId(null)
+    setCurrentLessonId(null)
+    setUploadedFiles([])
+    try {
+      localStorage.removeItem("pathwise_conversation_id")
+      localStorage.removeItem("pathwise_chat_messages")
+    } catch {}
+    setSessionKey((k) => k + 1)
+  }
 
   const studyTopicFocus = useMemo(() => {
     const parts: string[] = []
@@ -111,26 +123,36 @@ export default function LearnPage() {
           ? note.trim()
           : `Teach me about "${topic}" — key concepts, a concrete example, and how to get better at it.`,
       )
+      resetLearnSession()
       toast({ title: "Topic loaded", description: `Tutor focused on "${topic}". Press send to start — no PDF needed.` })
     }
   }, [])
 
-  // Persist conversation_id when it changes
+  // Persist conversation_id when it changes; remove when cleared (New chat / topic reset).
   useEffect(() => {
-    if (conversationId) {
-      try {
+    try {
+      if (conversationId) {
         localStorage.setItem("pathwise_conversation_id", conversationId)
-      } catch {}
-    }
+      } else {
+        localStorage.removeItem("pathwise_conversation_id")
+      }
+    } catch {}
   }, [conversationId])
 
   const handleApplySettings = () => {
+    const newTopic = studyTopic.trim()
     setAppliedExperienceLevel(experienceLevel)
     setAppliedFramework(framework)
-    setAppliedStudyTopic(studyTopic.trim())
+    setAppliedStudyTopic(newTopic)
+    // Topic-only mode: drop any PDF-backed conversation so quick actions use KB + topic.
+    if (newTopic) {
+      resetLearnSession()
+    }
     toast({
       title: "Settings Applied",
-      description: `Experience level: ${experienceLevel}, Framework: ${framework}`,
+      description: newTopic
+        ? `Focused on "${newTopic}" — start fresh with Quiz, Flashcards, or chat.`
+        : `Experience level: ${experienceLevel}, Framework: ${framework}`,
     })
   }
 
@@ -265,6 +287,7 @@ export default function LearnPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <UnifiedAIInterface
+                  key={sessionKey}
                   files={uploadedFiles}
                   selectedLevel={appliedExperienceLevel}
                   selectedFramework={appliedFramework}
@@ -273,6 +296,7 @@ export default function LearnPage() {
                   currentLessonId={currentLessonId}
                   conversationId={conversationId}
                   onConversationIdChange={setConversationId}
+                  onResetSession={resetLearnSession}
                   onFileUpload={handleFileUpload}
                   isUploading={isUploading}
                   isDragOver={isDragOver}

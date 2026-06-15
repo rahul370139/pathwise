@@ -96,7 +96,9 @@ interface UnifiedAIInterfaceProps {
   initialMessage?: string
   currentLessonId?: number | null
   conversationId?: string | null
-  onConversationIdChange?: (id: string) => void
+  onConversationIdChange?: (id: string | null) => void
+  /** Clears PDF + conversation session in the parent (Learn page). */
+  onResetSession?: () => void
   onFileUpload?: (files: FileList | null) => void
   isUploading?: boolean
   isDragOver?: boolean
@@ -115,6 +117,7 @@ export function UnifiedAIInterface({
   currentLessonId,
   conversationId,
   onConversationIdChange,
+  onResetSession,
   onFileUpload,
   isUploading = false,
   isDragOver = false,
@@ -790,9 +793,14 @@ export function UnifiedAIInterface({
   const clearConversation = () => {
     setMessages([])
     setInputMessage("")
+    setUploadedPdfId(null)
+    setUploadedFiles([])
     try {
       localStorage.removeItem("pathwise_chat_messages")
+      localStorage.removeItem("pathwise_conversation_id")
     } catch {}
+    onConversationIdChange?.(null)
+    onResetSession?.()
   }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
