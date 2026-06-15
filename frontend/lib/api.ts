@@ -202,7 +202,8 @@ export const learnAPI = {
       }),
     }),
 
-  getCompletedLessons: (userId: string) => apiCall<any[]>(`/api/users/${userId}/completed-lessons`),
+  getCompletedLessons: (userId: string) =>
+    apiCall<{ completed_lessons: unknown[] }>(`/api/users/${userId}/completed-lessons`),
 
   getUserProgress: (userId: string) => apiCall<any>(`/api/users/${userId}/progress`),
 }
