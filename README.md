@@ -23,7 +23,7 @@ Monorepo for PathWise — an AI-powered learning and career-readiness platform b
 - **`backend/knowledge_base/`**: Version-controlled grounding corpus (learning topics, behavioral prep, O*NET briefs) synced to **Foundry IQ**
 - **`frontend/`**: Next.js app (PathWise UI)
 - **`backend/scripts/`**: offline / maintenance scripts (`push_to_foundry.py`, `onet_to_markdown.py`, RAG ingest)
-- **Root deploy configs**: `Procfile`, `render.yaml`
+- **Root deploy configs**: `Procfile`, `render.yaml`, `LICENSE`, `SECURITY.md`
 
 
 ## System Architecture (End-to-End)
@@ -182,7 +182,7 @@ flowchart TB
     subgraph DOM["Domain & Intelligence Layer (Python Modules)"]
       Distiller["distiller.py<br/>intent routing · prompt assembly · generation"]
       ConvState["conversation store/cache<br/>file_context + side-menu state"]
-      RAG["rag_kb.py<br/>retrieve() → Foundry IQ or Supabase"]
+      RAG["rag_kb.py<br/>retrieve → Foundry IQ or Supabase"]
       FIQmod["foundry_iq.py<br/>Microsoft Foundry IQ client"]
       SimOrch["career_simulator.py<br/>Planner · Retrieval · Interviewer · Scorer"]
       EvalSim["eval_simulator.py<br/>golden-set groundedness + latency"]

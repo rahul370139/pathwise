@@ -1,7 +1,7 @@
 -- PathWise Supabase migration: interview_prep knowledge base
 --
 -- Run this once in the Supabase SQL editor for your project
--- (https://jlrywvqnhlqjslxfmbsr.supabase.co → SQL editor → New query → paste → Run).
+-- (https://<your-project>.supabase.co → SQL editor → New query → paste → Run).
 --
 -- After it succeeds, ingest the corpus locally:
 --    cd backend && python -m rag_kb ingest /path/to/interview_prep

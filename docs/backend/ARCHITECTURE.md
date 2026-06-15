@@ -29,7 +29,7 @@ flowchart LR
 
     subgraph Modules["pathwise/ package"]
         DIST[learn/distiller.py<br/>chunk·embed·LLM·intent]
-        RAG[learn/rag_kb.py<br/>retrieve() indirection]
+        RAG["learn/rag_kb.py<br/>retrieve indirection"]
         FIQ[infra/foundry_iq.py<br/>Microsoft Foundry IQ]
         SIMM[career/career_simulator.py<br/>multi-agent loop]
         RES[career/resume_career.py<br/>resume parser + planner]
@@ -148,7 +148,7 @@ sequenceDiagram
     participant P as /api/career/resume/parse
     participant B as /api/career/plan/build
     participant RC as resume_career.py
-    participant CM as career_matcher.matcher.career_data (O*NET)
+    participant CM as career_matcher O*NET data
     participant G as Groq
 
     U->>FE: upload resume.pdf
@@ -193,7 +193,7 @@ flowchart TB
         CK[chunk_markdown<br/>1800 char windows<br/>250 char overlap]
         EMB1[Cohere embed-english-light-v3<br/>384-dim]
         UP[supabase upsert<br/>on chunk_hash]
-        TBL[(interview_prep_kb<br/>id · doc · section · chunk · embedding vector(384))]
+        TBL[("interview_prep_kb<br/>384-dim embeddings")]
         IDX[ivfflat index<br/>vector_cosine_ops]
         MD --> CK --> EMB1 --> UP --> TBL
         TBL --> IDX
@@ -338,18 +338,18 @@ sequenceDiagram
 
     U->>FE: upload resume + paste JD
     FE->>API: POST /start
-    API->>S: PlannerAgent.plan()
+    API->>S: PlannerAgent plan
     S->>G: competency gap extraction
     S-->>FE: session_id + plan (SSE: plan)
     FE->>API: GET /stream/{session_id}
     loop Adaptive interview
-        S->>F: RetrievalAgent.retrieve(competency)
+        S->>F: RetrievalAgent retrieve competency
         F-->>S: evidence + citations
-        S->>G: InterviewerAgent.next_question()
+        S->>G: InterviewerAgent next question
         S-->>FE: SSE retrieve + generate
         U->>FE: answer
         FE->>API: POST /answer
-        S->>G: ScorerAgent.score_answer()
+        S->>G: ScorerAgent score answer
         S-->>FE: score + next question (SSE verify)
     end
     FE->>API: GET /report/{session_id}

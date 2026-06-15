@@ -29,3 +29,14 @@ cd ../frontend && pnpm build
 ```
 
 Expected: `foundry_iq` provider, DNS OK, eval report written, Next.js build succeeds.
+
+## Submission & compliance (Agents League)
+
+Before pushing to a **public** repository:
+
+- [ ] No secrets in code — use `backend.env` / Vercel env only (see [SECURITY.md](../SECURITY.md))
+- [ ] `backend.env` is **not** tracked by git (listed in `.gitignore`)
+- [ ] Only General-level, non-confidential content
+- [ ] [LICENSE](../LICENSE) included (MIT)
+- [ ] Sign the **Microsoft CLA** when contributing to the official Agents League org repo (GitHub prompts on first PR)
+

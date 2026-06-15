@@ -24,9 +24,11 @@ Pipfile.lock
 # Poetry
 /.venv/
 
-# dotenv
+# dotenv / secrets (never commit real values)
 .env
 .env.*
+backend.env
+frontend/.env.local
 
 # Secrets and keys
 *.key
